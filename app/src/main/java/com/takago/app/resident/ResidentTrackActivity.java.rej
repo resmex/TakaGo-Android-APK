@@ -1,0 +1,18 @@
+diff a/app/src/main/java/com/takago/app/resident/ResidentTrackActivity.java b/app/src/main/java/com/takago/app/resident/ResidentTrackActivity.java	(rejected hunks)
+@@ -145,7 +145,8 @@ public class ResidentTrackActivity extends AppCompatActivity {
+-        if (activePickup == null || !"On the way".equalsIgnoreCase(activePickup.status)) {
++        if (activePickup == null || !("On the way".equalsIgnoreCase(activePickup.status)
++                || "Assigned".equalsIgnoreCase(activePickup.status))) {
+@@ -159,8 +160,7 @@ public class ResidentTrackActivity extends AppCompatActivity {
+         UserAccount driver = activeDriverId > 0 ? dbHelper.getUserById(activeDriverId) : null;
+-        if (driver == null || !RoutingService.isValidCoordinate(driver.latitude, driver.longitude)
+-                || !isFreshDriverLocation(driver.lastLocationUpdate)) {
++        if (driver == null || !RoutingService.isValidCoordinate(driver.latitude, driver.longitude)) {
+@@ -342,11 +346,7 @@ public class ResidentTrackActivity extends AppCompatActivity {
+         if (mapEngine == null) return;
+         if (lastRoutePoints != null && !lastRoutePoints.isEmpty()) {
+-            List<LatLngPoint> visible = new java.util.ArrayList<>(lastRoutePoints);
+-            if (RoutingService.isValidCoordinate(residentLat, residentLng))
+-                visible.add(new LatLngPoint(residentLat, residentLng));
+-            mapEngine.zoomToBounds(visible, 120);
++            mapEngine.zoomToBounds(lastRoutePoints, 140);

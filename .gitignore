@@ -1,0 +1,50 @@
+# Android Studio / IntelliJ
+*.iml
+.idea/
+.gradle/
+
+# Local machine configuration
+local.properties
+
+# Build outputs
+build/
+**/build/
+
+# Generated Android packages
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# Native build files
+.externalNativeBuild/
+.cxx/
+
+# Captures
+captures/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Signing / private keys
+*.jks
+*.keystore
+
+# Secrets
+.env
+.env.*
+
+# Local caches / staging
+.composer-cache/
+laravel_stage/
+
+# Web portal is stored in separate GitHub repository
+web/

@@ -1,0 +1,9 @@
+diff a/app/src/main/java/com/takago/app/auth/RegisterActivity.java b/app/src/main/java/com/takago/app/auth/RegisterActivity.java	(rejected hunks)
+@@ -24,7 +24,7 @@ public class RegisterActivity extends AppCompatActivity {
+-    TextInputEditText etUsername, etEmail, etPhone, etPassword, etConfirmPassword;
++    TextInputEditText etUsername, etEmail, etPhone, etWard, etPassword, etConfirmPassword;
+@@ -135,7 +143,7 @@ public class RegisterActivity extends AppCompatActivity {
+         btnCreateAccount.setEnabled(false);
+         btnCreateAccount.setText("Creating account...");
+-        ApiClient.register(username, email, phone, password, new ApiClient.LoginCallback() {
++        ApiClient.register(username, email, phone, ward, password, new ApiClient.LoginCallback() {

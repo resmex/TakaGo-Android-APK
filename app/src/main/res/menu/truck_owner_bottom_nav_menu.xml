@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/nav_home"
+        android:icon="@drawable/ic_home"
+        android:title="Home"/>
+
+    <item
+        android:id="@+id/nav_drivers"
+        android:icon="@drawable/ic_people"
+        android:title="Drivers"/>
+
+    <item
+        android:id="@+id/nav_fleet"
+        android:icon="@drawable/ic_truck_outline"
+        android:title="Fleet"/>
+
+    <item
+        android:id="@+id/nav_profile"
+        android:icon="@drawable/ic_person"
+        android:title="Profile"/>
+
+</menu>

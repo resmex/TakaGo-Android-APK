@@ -1,0 +1,100 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <application
+        android:name=".app.TakaGoApplication"
+        android:usesCleartextTraffic="true"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Takago">
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${GOOGLE_MAPS_API_KEY}" />
+
+        <activity
+            android:name=".app.SplashActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".auth.RegisterActivity" />
+        <activity android:name=".auth.LoginActivity" />
+        <activity android:name=".auth.ForgotPasswordActivity" />
+
+        <activity android:name=".admin.MunicipalAdminHomeActivity" />
+        <activity android:name=".admin.ManageWardsActivity" />
+        <activity android:name=".admin.WardBoundaryMapActivity" />
+        <activity android:name=".admin.WardAdminHomeActivity" />
+        <activity android:name=".admin.AdminUsersActivity" />
+        <activity android:name=".admin.AdminPickupsActivity" />
+        <activity android:name=".admin.AdminReportsActivity" />
+        <activity android:name=".admin.PricingSettingsActivity" />
+        <activity android:name=".admin.VehicleApprovalsActivity" />
+        <activity android:name=".admin.ComplaintsActivity" />
+
+        <activity android:name=".resident.ResidentHomeActivity" />
+        <activity android:name=".resident.ResidentTrackActivity" />
+        <activity android:name=".resident.ResidentPickupDetailsActivity" />
+        <activity android:name=".resident.ResidentProfileActivity" />
+        <activity android:name=".resident.ResidentEditProfileActivity" />
+        <activity android:name=".resident.ResidentRequestPickupActivity" />
+        <activity android:name=".resident.ResidentPickupLocationActivity" />
+        <activity android:name=".resident.FindingDriverActivity" />
+        <activity android:name=".resident.ResidentPickupConfirmedActivity" />
+        <activity android:name=".resident.ResidentHistoryActivity" />
+        <activity android:name=".notifications.NotificationActivity" />
+        <activity android:name=".resident.ReceiptActivity" />
+
+        <activity android:name=".driver.DriverHomeActivity" />
+        <activity android:name=".driver.DriverTripsActivity" />
+        <activity android:name=".driver.DriverStartTripActivity" />
+        <activity android:name=".driver.DriverNavigationActivity" />
+        <activity android:name=".driver.DriverPickupDetailsActivity" />
+        <activity android:name=".driver.DriverHistoryActivity" />
+        <activity android:name=".driver.DriverEditProfileActivity" />
+        <activity android:name=".driver.DriverProfileActivity" />
+        <activity android:name=".driver.DriverCashActivity" />
+        <activity android:name=".common.InfoActivity" />
+        <activity android:name=".common.TransactionHistoryActivity" />
+
+        <activity android:name=".operator.TruckOwnerHomeActivity" />
+        <activity android:name=".operator.ManualAssignActivity" />
+        <activity android:name=".operator.TruckOwnerFleetActivity" />
+        <activity android:name=".operator.TruckOwnerDriversActivity" />
+        <activity android:name=".operator.TruckOwnerProfileActivity" />
+        <activity android:name=".operator.EarningsActivity" />
+        <activity android:name=".auth.RegisterDriverActivity" />
+        <activity android:name=".auth.RegisterWasteOperatorActivity" />
+        <activity android:name=".auth.RegisterWardAdminActivity" />
+        <activity android:name=".operator.SubmitVehicleActivity" />
+        <activity android:name=".location.WardLocationPickerActivity" />
+
+        <activity android:name=".app.MainActivity" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+    </application>
+
+</manifest>

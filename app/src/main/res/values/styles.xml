@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppButtonPrimary">
+        <item name="android:background">@drawable/bg_button_primary</item>
+        <item name="android:textColor">@color/color_surface</item>
+    </style>
+
+    <style name="AppButtonSecondary">
+        <item name="android:background">@drawable/bg_button_secondary</item>
+        <item name="android:textColor">@color/color_surface</item>
+    </style>
+
+    <style name="AppCard">
+        <item name="android:background">@drawable/bg_card</item>
+    </style>
+
+    <style name="AppInput">
+        <item name="android:background">@drawable/bg_input</item>
+        <item name="android:textColor">@color/color_text_primary</item>
+        <item name="android:textColorHint">@color/color_text_secondary</item>
+    </style>
+
+    <style name="AppBottomNavigation" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="android:background">@drawable/bg_bottom_nav</item>
+        <item name="itemIconTint">@color/bottom_nav_selector</item>
+        <item name="itemTextColor">@color/bottom_nav_selector</item>
+        <item name="labelVisibilityMode">labeled</item>
+    </style>
+
+    <style name="WardAdminMetric">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">72dp</item>
+        <item name="android:layout_columnWeight">1</item>
+        <item name="android:layout_margin">4dp</item>
+        <item name="android:background">@drawable/bg_input</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textColor">@color/color_text_primary</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+</resources>

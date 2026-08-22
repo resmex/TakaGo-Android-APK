@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F4F6F9"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingStart="32dp"
+    android:paddingEnd="32dp">
+
+    <!-- Green Check Circle -->
+    <FrameLayout
+        android:layout_width="90dp"
+        android:layout_height="90dp">
+
+        <View
+            android:layout_width="90dp"
+            android:layout_height="90dp"
+            android:background="@drawable/bg_circle_green" />
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_check"
+            app:tint="@color/color_surface" />
+
+    </FrameLayout>
+
+    <!-- Title -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:text="Pickup Confirmed!"
+        android:textColor="@color/color_text_primary"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <!-- Subtitle -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:text="A driver will be assigned shortly. You'll get a notification"
+        android:textColor="@color/color_text_secondary"
+        android:textSize="13sp" />
+
+    <!-- Track Now Button -->
+    <Button
+        android:id="@+id/btnTrackNow"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:layout_marginTop="32dp"
+        android:text="Track now"
+        android:textColor="@color/color_surface"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:backgroundTint="@color/color_primary"
+        app:cornerRadius="27dp" />
+
+    <!-- Back Home Button -->
+    <Button
+        android:id="@+id/btnBackHome"
+        android:layout_width="match_parent"
+        android:layout_height="54dp"
+        android:layout_marginTop="12dp"
+        android:text="Back home"
+        android:textColor="@color/color_text_primary"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:backgroundTint="@color/color_surface"
+        app:cornerRadius="27dp"
+        app:strokeColor="#E0E0E0"
+        app:strokeWidth="1dp" />
+
+</LinearLayout>
