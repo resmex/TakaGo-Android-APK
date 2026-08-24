@@ -27,6 +27,29 @@ public class MapMarkerFactory {
         return wrapped;
     }
 
+    /** Strong black bin marker for the resident's requested waste pickup point. */
+    public static Drawable residentWaste(Context context) {
+        return sizedTinted(context, R.drawable.ic_waste_small, 38, 0xFF151515);
+    }
+
+    /** Green truck marker for the assigned driver's live position. */
+    public static Drawable driverTruck(Context context) {
+        return sizedTinted(context, R.drawable.ic_truck_outline, 42, 0xFF1FAF5A);
+    }
+
+    private static Drawable sizedTinted(Context context, int resource, int sizeDp, int color) {
+        Drawable source = ContextCompat.getDrawable(context, resource);
+        if (source == null) return null;
+        Drawable wrapped = DrawableCompat.wrap(source.mutate());
+        DrawableCompat.setTint(wrapped, color);
+        int size = Math.round(sizeDp * context.getResources().getDisplayMetrics().density);
+        Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        wrapped.setBounds(0, 0, size, size);
+        wrapped.draw(canvas);
+        return new BitmapDrawable(context.getResources(), bitmap);
+    }
+
     public static Drawable intermediateStop(Context context, int number, boolean completed) {
         return numberedStop(context, number, completed, false, false);
     }

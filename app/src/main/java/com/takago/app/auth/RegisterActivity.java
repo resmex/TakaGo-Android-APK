@@ -7,7 +7,7 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Patterns;
 import android.widget.Button;
-import android.widget.CheckBox;
+import com.google.android.material.checkbox.MaterialCheckBox;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -29,7 +29,7 @@ import com.takago.app.resident.ResidentHomeActivity;
 
 public class RegisterActivity extends AppCompatActivity {
     private TextInputEditText etUsername, etEmail, etPhone, etPassword, etConfirmPassword;
-    private CheckBox checkboxTerms;
+    private MaterialCheckBox checkboxTerms;
     private Button btnCreateAccount;
     private DatabaseHelper dbHelper;
     private String pendingName, pendingEmail, pendingPhone, pendingPassword;
@@ -113,6 +113,7 @@ public class RegisterActivity extends AppCompatActivity {
                     btnCreateAccount.setText("Create Account");
                     new SessionManager(RegisterActivity.this)
                             .saveApiSession(account.id, account.name, account.role, token);
+                    com.takago.app.notifications.MyFirebaseMessagingService.registerAuthenticatedDevice(RegisterActivity.this);
                     dbHelper.upsertApiProfile(account.id, account.name, account.email, account.phone,
                             account.profileImagePath, account.role, account.ward, account.operatorId);
                     Toast.makeText(RegisterActivity.this,

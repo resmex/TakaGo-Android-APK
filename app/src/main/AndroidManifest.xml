@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
         android:name=".app.TakaGoApplication"
@@ -45,6 +47,14 @@
         <activity android:name=".admin.PricingSettingsActivity" />
         <activity android:name=".admin.VehicleApprovalsActivity" />
         <activity android:name=".admin.ComplaintsActivity" />
+        <activity android:name=".resident.ResidentComplaintsActivity" />
+        <activity android:name=".resident.ResidentSchedulesActivity" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_notifications" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/color_primary" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="takago_updates" />
+        <service android:name=".notifications.MyFirebaseMessagingService" android:exported="false">
+            <intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter>
+        </service>
 
         <activity android:name=".resident.ResidentHomeActivity" />
         <activity android:name=".resident.ResidentTrackActivity" />

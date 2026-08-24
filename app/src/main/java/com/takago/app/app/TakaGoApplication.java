@@ -27,6 +27,7 @@ public class TakaGoApplication extends Application {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
 
         RoutingService.initialize(this);
+        com.takago.app.notifications.MyFirebaseMessagingService.createChannel(this);
         initializePlaces();
         refreshSharedProfile();
         registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {

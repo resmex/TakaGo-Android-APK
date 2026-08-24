@@ -163,6 +163,15 @@
                         android:layout_marginBottom="14dp"
                         android:background="#F0F0F0" />
 
+                    <ImageView
+                        android:id="@+id/ivResidentWastePhoto"
+                        android:layout_width="match_parent"
+                        android:layout_height="190dp"
+                        android:layout_marginBottom="14dp"
+                        android:contentDescription="Resident waste photo"
+                        android:scaleType="centerCrop"
+                        android:visibility="gone" />
+
                     <!-- Detail rows -->
                     <LinearLayout
                         android:layout_width="match_parent"

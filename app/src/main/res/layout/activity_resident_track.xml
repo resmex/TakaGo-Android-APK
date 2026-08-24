@@ -62,20 +62,23 @@
 
     <TextView
         android:id="@+id/tvTrackPickupLocation"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
-        android:layout_margin="20dp"
-        android:background="@drawable/bg_circle_white_solid"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginStart="72dp"
+        android:layout_marginTop="48dp"
+        android:layout_marginEnd="72dp"
+        android:background="@drawable/bg_map_location_card"
         android:elevation="8dp"
-        android:gravity="center"
+        android:gravity="start|center_vertical"
         android:maxLines="2"
-        android:paddingStart="20dp"
-        android:paddingTop="12dp"
-        android:paddingEnd="20dp"
-        android:paddingBottom="12dp"
+        android:paddingStart="14dp"
+        android:paddingTop="9dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="9dp"
         android:text=""
         android:textColor="@color/color_text_primary"
+        android:textSize="13sp"
         android:textStyle="bold" />
 
     <!-- Route callbacks still update these values; they are displayed on the dashboard. -->

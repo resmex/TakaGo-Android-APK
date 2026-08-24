@@ -18,7 +18,7 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Patterns;
 import android.widget.Button;
-import android.widget.CheckBox;
+import com.google.android.material.checkbox.MaterialCheckBox;
 import android.widget.TextView;
 import android.widget.Toast;
 import java.util.Locale;
@@ -32,7 +32,7 @@ import com.google.android.material.textfield.TextInputEditText;
 public class LoginActivity extends AppCompatActivity {
 
     TextInputEditText etEmailPhone, etPassword;
-    CheckBox checkboxRememberMe;
+    MaterialCheckBox checkboxRememberMe;
     Button btnLogin;
     TextView tvCreateAccount;
     TextView tvForgotPassword;
@@ -48,9 +48,13 @@ public class LoginActivity extends AppCompatActivity {
         etEmailPhone = findViewById(R.id.etEmailPhone);
         etPassword = findViewById(R.id.etPassword);
         checkboxRememberMe = findViewById(R.id.checkboxRememberMe);
+        android.content.SharedPreferences loginPrefs = getSharedPreferences("login_preferences", MODE_PRIVATE);
+        checkboxRememberMe.setChecked(loginPrefs.getBoolean("remember_me", false));
+        if (checkboxRememberMe.isChecked()) etEmailPhone.setText(loginPrefs.getString("login", ""));
         btnLogin = findViewById(R.id.btnLogin);
         tvCreateAccount = findViewById(R.id.tvCreateAccount);
         tvForgotPassword = findViewById(R.id.tvForgotPassword);
+        MyFirebaseMessagingService.requestNotificationPermission(this);
 
         btnLogin.setOnClickListener(v -> validateLogin());
 
@@ -109,6 +113,10 @@ public class LoginActivity extends AppCompatActivity {
                     btnLogin.setEnabled(true);
                     btnLogin.setText("Login");
                     new SessionManager(LoginActivity.this).saveApiSession(account.id, account.name, account.role, token);
+                    MyFirebaseMessagingService.registerAuthenticatedDevice(LoginActivity.this);
+                    getSharedPreferences("login_preferences", MODE_PRIVATE).edit()
+                            .putBoolean("remember_me", checkboxRememberMe.isChecked())
+                            .putString("login", checkboxRememberMe.isChecked() ? emailPhone : "").apply();
                     dbHelper.upsertApiProfile(account.id, account.name, account.email, account.phone,
                             account.profileImagePath, account.role, account.ward, account.operatorId);
                     openHome(account);

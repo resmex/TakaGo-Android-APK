@@ -1,166 +1,122 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#F4F6F9"
-    android:orientation="vertical">
-
-    <!-- ===== HEADER ===== -->
-    <RelativeLayout
-        android:id="@+id/headerContainer"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:minHeight="96dp"
-        android:background="#F4F6F9"
-        android:paddingStart="8dp"
-        android:paddingTop="38dp"
-        android:paddingEnd="16dp">
-
-        <ImageView
-            android:id="@+id/btnBack"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_alignParentStart="true"
-            android:layout_alignParentTop="true"
-            android:background="@drawable/bg_circle_white_solid"
-            android:contentDescription="Back"
-            android:elevation="2dp"
-            android:padding="10dp"
-            android:src="@drawable/ic_arrow_back"
-            app:tint="@color/color_text_primary" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_alignTop="@id/btnBack"
-            android:layout_marginStart="12dp"
-            android:layout_marginTop="7dp"
-            android:layout_toEndOf="@id/btnBack"
-            android:text="Receipt"
-            android:textColor="@color/color_text_primary"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-    </RelativeLayout>
-
-    <ScrollView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
-
-            <!-- Total price banner -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:cardBackgroundColor="@color/color_primary"
-                app:cardCornerRadius="18dp"
-                app:cardElevation="2dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="22dp">
-
-                    <TextView
-                        android:id="@+id/tvReceiptCode"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="#4300-123"
-                        android:textColor="@color/color_status_success_bg"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/tvReceiptFinalPrice"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:text="TZS 0"
-                        android:textColor="@color/color_surface"
-                        android:textSize="30sp"
-                        android:textStyle="bold" />
-
-                    <TextView
-                        android:id="@+id/tvReceiptPaymentStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="8dp"
-                        android:background="@drawable/bg_circle_white_alpha"
-                        android:paddingStart="14dp"
-                        android:paddingTop="4dp"
-                        android:paddingEnd="14dp"
-                        android:paddingBottom="4dp"
-                        android:text="Unpaid"
-                        android:textColor="@color/color_surface"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                </LinearLayout>
-
-            </androidx.cardview.widget.CardView>
-
-            <!-- Details card -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/color_surface"
-                app:cardCornerRadius="18dp"
-                app:cardElevation="2dp">
-
-                <LinearLayout
-                    android:id="@+id/receiptDetailsContainer"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="18dp" />
-
-            </androidx.cardview.widget.CardView>
-
-            <!-- Price breakdown card -->
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardBackgroundColor="@color/color_surface"
-                app:cardCornerRadius="18dp"
-                app:cardElevation="2dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="18dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Price breakdown"
-                        android:textColor="@color/color_text_primary"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-
-                    <LinearLayout
-                        android:id="@+id/receiptPriceContainer"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:orientation="vertical" />
-
-                </LinearLayout>
-
-            </androidx.cardview.widget.CardView>
-
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:fillViewport="true" android:background="#F5F6F7">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical">
+        <LinearLayout android:id="@+id/headerContainer" android:layout_width="match_parent"
+            android:layout_height="72dp" android:orientation="horizontal"
+            android:gravity="center_vertical" android:paddingStart="20dp"
+            android:paddingEnd="20dp" android:background="#FFFFFF">
+            <ImageButton android:id="@+id/btnBack" android:layout_width="44dp"
+                android:layout_height="44dp" android:background="@android:color/transparent"
+                android:padding="10dp" android:src="@drawable/ic_arrow_back"
+                app:tint="#1F2933" android:contentDescription="Back" />
+            <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                android:layout_weight="1" android:layout_marginStart="12dp"
+                android:text="Receipt" android:textSize="24sp" android:textStyle="bold"
+                android:textColor="#1F2933" />
+            <ImageButton android:id="@+id/btnDownloadReceipt" android:layout_width="44dp"
+                android:layout_height="44dp" android:background="@android:color/transparent"
+                android:padding="10dp" android:src="@drawable/ic_download"
+                app:tint="#1FAF5A" android:contentDescription="Download receipt" />
         </LinearLayout>
-
-    </ScrollView>
-
-</LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="vertical" android:paddingStart="20dp"
+            android:paddingEnd="20dp" android:paddingBottom="24dp">
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="12dp" app:cardCornerRadius="24dp"
+                app:cardElevation="2dp" app:cardBackgroundColor="#18B955">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:gravity="center" android:padding="15dp">
+                    <TextView android:id="@+id/tvReceiptCode" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:textSize="15sp" android:textColor="#EAF8EF" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="5dp" android:text="Total Paid"
+                        android:textSize="15sp" android:textColor="#FFFFFF" />
+                    <TextView android:id="@+id/tvTotalPaid" android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" android:layout_marginTop="1dp"
+                        android:textSize="30sp" android:textStyle="bold" android:textColor="#FFFFFF" />
+                    <com.google.android.material.chip.Chip android:id="@+id/chipPaymentStatus"
+                        android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp" android:minHeight="32dp"
+                        app:ensureMinTouchTargetSize="false" android:textStyle="bold"
+                        android:textColor="#168A45" app:chipBackgroundColor="#FFFFFF"
+                        app:chipIcon="@drawable/ic_check_circle" app:chipIconTint="#168A45"
+                        app:chipStrokeWidth="0dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="18dp" app:cardCornerRadius="20dp"
+                app:cardElevation="1dp" app:strokeColor="#E5E7EB" app:strokeWidth="1dp"
+                app:cardBackgroundColor="#FFFFFF">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Receipt details" android:textStyle="bold" android:textSize="18sp"
+                        android:textColor="#1F2933" android:layout_marginBottom="14dp" />
+                    <include android:id="@+id/rowRequestId" layout="@layout/item_receipt_row" />
+                    <include android:id="@+id/rowResident" layout="@layout/item_receipt_row" />
+                    <include android:id="@+id/rowDriver" layout="@layout/item_receipt_row" />
+                    <include android:id="@+id/rowWard" layout="@layout/item_receipt_row" />
+                    <include android:id="@+id/rowPickupAddress" layout="@layout/item_receipt_row" />
+                    <include android:id="@+id/rowWasteType" layout="@layout/item_receipt_row" />
+                    <include android:id="@+id/rowDateTime" layout="@layout/item_receipt_row" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="18dp" app:cardCornerRadius="20dp"
+                app:cardElevation="1dp" app:strokeColor="#E5E7EB" app:strokeWidth="1dp"
+                app:cardBackgroundColor="#FFFFFF">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="vertical" android:padding="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                        android:text="Price breakdown" android:textStyle="bold" android:textSize="18sp"
+                        android:textColor="#1F2933" android:layout_marginBottom="14dp" />
+                    <include android:id="@+id/rowMeasuredWeight" layout="@layout/item_receipt_row" />
+                    <include android:id="@+id/rowIncludedWeight" layout="@layout/item_receipt_row" />
+                    <include android:id="@+id/rowExtraWeight" layout="@layout/item_receipt_row" />
+                    <include android:id="@+id/rowRatePerKg" layout="@layout/item_receipt_row" />
+                    <include android:id="@+id/rowWasteMultiplier" layout="@layout/item_receipt_row" />
+                    <include android:id="@+id/rowWeightCharge" layout="@layout/item_receipt_row" />
+                    <include android:id="@+id/rowBookingFee" layout="@layout/item_receipt_row" />
+                    <include android:id="@+id/rowDistanceFee" layout="@layout/item_receipt_row" />
+                    <View android:layout_width="match_parent" android:layout_height="1dp"
+                        android:layout_marginTop="8dp" android:layout_marginBottom="10dp"
+                        android:background="#E5E7EB" />
+                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                        android:orientation="horizontal" android:gravity="center_vertical">
+                        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+                            android:layout_weight="1" android:text="Final price" android:textStyle="bold"
+                            android:textSize="20sp" android:textColor="#168A45" />
+                        <TextView android:id="@+id/tvFinalPrice" android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" android:textStyle="bold"
+                            android:textSize="20sp" android:textColor="#168A45" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPayReceipt" android:layout_width="match_parent"
+                android:layout_height="56dp" android:layout_marginTop="18dp"
+                android:text="Choose payment method" android:textAllCaps="false"
+                android:textSize="16sp" android:textStyle="bold" android:textColor="#FFFFFF"
+                app:backgroundTint="#16A34A" app:cornerRadius="16dp" android:visibility="gone" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSaveShareReceipt" android:layout_width="match_parent"
+                android:layout_height="56dp" android:layout_marginTop="18dp"
+                android:text="Save or share receipt PDF" android:textAllCaps="false"
+                android:textSize="16sp" android:textStyle="bold" android:textColor="#FFFFFF"
+                app:backgroundTint="#16A34A" app:cornerRadius="16dp"
+                app:icon="@drawable/ic_share" app:iconTint="#FFFFFF"
+                app:iconGravity="textStart" app:iconPadding="10dp" />
+            <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:layout_marginTop="16dp" android:gravity="center"
+                android:text="Thank you for using TakaGo. Keep our city clean!"
+                android:textSize="13sp" android:textColor="#6B7280" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

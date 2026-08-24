@@ -131,6 +131,14 @@
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Choose the size that best matches your waste"
+                        android:textColor="@color/color_text_secondary"
+                        android:textSize="12sp" />
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -141,15 +149,18 @@
                         <LinearLayout
                             android:id="@+id/optionSmall"
                             android:layout_width="0dp"
-                            android:layout_height="64dp"
+                            android:layout_height="136dp"
                             android:layout_weight="1"
+                            android:layout_marginEnd="5dp"
+                            android:background="@drawable/bg_size_option_selected"
                             android:gravity="center"
-                            android:orientation="horizontal">
+                            android:orientation="vertical"
+                            android:padding="8dp">
 
                             <ImageView
                                 android:id="@+id/ivWasteSmall"
-                                android:layout_width="34dp"
-                                android:layout_height="34dp"
+                                android:layout_width="46dp"
+                                android:layout_height="46dp"
                                 android:background="@drawable/bg_circle_green_solid"
                                 android:padding="9dp"
                                 android:src="@drawable/ic_waste_small"
@@ -159,8 +170,9 @@
                                 android:id="@+id/tvLabelSmall"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="6dp"
-                                android:text="Small&#10;Up to 20 kg"
+                                android:layout_marginTop="5dp"
+                                android:gravity="center"
+                                android:text="Small&#10;Up to 20 kg&#10;Up to 60 L&#10;1–2 bags"
                                 android:textColor="@color/color_text_primary"
                                 android:textSize="11sp"
                                 android:textStyle="bold" />
@@ -169,16 +181,20 @@
                         <LinearLayout
                             android:id="@+id/optionMedium"
                             android:layout_width="0dp"
-                            android:layout_height="64dp"
+                            android:layout_height="136dp"
                             android:layout_weight="1"
+                            android:layout_marginStart="5dp"
+                            android:layout_marginEnd="5dp"
+                            android:background="@drawable/bg_size_option_unselected"
                             android:gravity="center"
-                            android:orientation="horizontal">
+                            android:orientation="vertical"
+                            android:padding="8dp">
 
                             <ImageView
                                 android:id="@+id/ivWasteMedium"
-                                android:layout_width="34dp"
-                                android:layout_height="34dp"
-                                android:padding="7dp"
+                                android:layout_width="46dp"
+                                android:layout_height="46dp"
+                                android:padding="10dp"
                                 android:src="@drawable/ic_waste_medium"
                                 app:tint="@color/color_text_hint" />
 
@@ -186,8 +202,9 @@
                                 android:id="@+id/tvLabelMedium"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="6dp"
-                                android:text="Medium&#10;21–50 kg"
+                                android:layout_marginTop="5dp"
+                                android:gravity="center"
+                                android:text="Medium&#10;21–50 kg&#10;61–120 L&#10;3–5 bags"
                                 android:textColor="@color/color_text_hint"
                                 android:textSize="11sp" />
                         </LinearLayout>
@@ -195,16 +212,19 @@
                         <LinearLayout
                             android:id="@+id/optionLarge"
                             android:layout_width="0dp"
-                            android:layout_height="64dp"
+                            android:layout_height="136dp"
                             android:layout_weight="1"
+                            android:layout_marginStart="5dp"
+                            android:background="@drawable/bg_size_option_unselected"
                             android:gravity="center"
-                            android:orientation="horizontal">
+                            android:orientation="vertical"
+                            android:padding="8dp">
 
                             <ImageView
                                 android:id="@+id/ivWasteLarge"
-                                android:layout_width="34dp"
-                                android:layout_height="34dp"
-                                android:padding="7dp"
+                                android:layout_width="46dp"
+                                android:layout_height="46dp"
+                                android:padding="10dp"
                                 android:src="@drawable/ic_waste_large"
                                 app:tint="@color/color_text_hint" />
 
@@ -212,14 +232,15 @@
                                 android:id="@+id/tvLabelLarge"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginStart="6dp"
-                                android:text="Large&#10;Above 50 kg"
+                                android:layout_marginTop="5dp"
+                                android:gravity="center"
+                                android:text="Large&#10;Above 50 kg&#10;Above 120 L&#10;6+ bags / bulky"
                                 android:textColor="@color/color_text_hint"
                                 android:textSize="11sp" />
                         </LinearLayout>
                     </LinearLayout>
 
-                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="6dp" android:text="Small: 1–2 normal bags  •  Medium: 3–5 bags  •  Large: bulky waste&#10;Choose the closest size. Final price will use the actual measured weight." android:textColor="@color/color_text_secondary" android:textSize="12sp" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:padding="10dp" android:background="@drawable/bg_info_green" android:text="Not sure? Choose the closest size. Final price uses the driver's measured weight." android:textColor="#2D6C3A" android:textSize="12sp" />
 
                     <View
                         android:layout_width="match_parent"

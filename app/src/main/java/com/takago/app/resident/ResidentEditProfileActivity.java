@@ -149,6 +149,7 @@ public class ResidentEditProfileActivity extends AppCompatActivity {
     }
 
     private void onPhotoSelected(String path) {
+        path=ImageUtils.prepareImageForUpload(this,path,"profile",ImageUtils.MAX_PROFILE_IMAGE_BYTES);
         if (path == null) {
             Toast.makeText(this, "Could not load that photo", Toast.LENGTH_SHORT).show();
             return;

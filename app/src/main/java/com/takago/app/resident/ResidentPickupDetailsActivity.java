@@ -16,9 +16,12 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
+import com.takago.app.R;
 import com.takago.app.common.ImageUtils;
 import com.takago.app.common.PickupAddressFormatter;
+import com.takago.app.common.PickupStatusUi;
 import com.takago.app.data.model.PickupRow;
 import com.takago.app.data.model.UserAccount;
 import com.takago.app.data.model.VehicleRow;
@@ -65,10 +68,11 @@ public class ResidentPickupDetailsActivity extends AppCompatActivity {
         setContentView(page);
 
         int pickupId = getIntent().getIntExtra("pickupId", -1);
-        PickupRow pickup = dbHelper.getTripById(pickupId);
-        if (pickup == null) { finish(); return; }
-        bind(pickup);
+        try { PickupRow pickup = dbHelper.getTripById(pickupId);if(pickup==null){showLoadError("This pickup is no longer available. Refresh the dashboard and try again.");return;}bind(pickup); }
+        catch(RuntimeException error){android.util.Log.e("ResidentPickupDetails","Could not display pickup "+pickupId,error);showLoadError("Pickup details could not be displayed. Return to the dashboard and refresh.");}
     }
+
+    private void showLoadError(String message){content.removeAllViews();heading("Unable to open pickup");body(message);Button close=new Button(this);close.setText("Back to dashboard");close.setOnClickListener(v->finish());content.addView(close,new LinearLayout.LayoutParams(-1,dp(48)));}
 
     private void bind(PickupRow pickup) {
         UserAccount driver = pickup.driverId > 0 ? dbHelper.getUserById(pickup.driverId) : null;
@@ -77,15 +81,24 @@ public class ResidentPickupDetailsActivity extends AppCompatActivity {
         int[] stops = dbHelper.getRouteStopSummary(pickup.groupId, pickup.id);
 
         heading(pickup.code != null ? pickup.code : "Request #" + pickup.id);
-        row("Status", value(pickup.status));
+        heading("Pickup information");
+        row("Waste type", value(pickup.wasteType));
+        row("Waste size", value(pickup.category));
+        if (pickup.weightKg > 0) row("Estimated weight", kg(pickup.weightKg));
+        if (pickup.measuredWeightKg > 0) row("Measured weight", kg(pickup.measuredWeightKg));
+
+        heading("Location");
         row("Pickup location", PickupAddressFormatter.primary(pickup));
         row("Ward", PickupAddressFormatter.wardLine(pickup));
-        row("Requested", value(pickup.createdAt));
-        row("Pickup date", value(pickup.pickupDate));
         if (pickup.routeDistanceMeters > 0)
             row("Distance", String.format(Locale.US, "%.1f km", pickup.routeDistanceMeters / 1000d));
         if (pickup.routeDurationSeconds > 0)
             row("ETA", Math.max(1, pickup.routeDurationSeconds / 60) + " min");
+
+        heading("Status");
+        row("Status", PickupStatusUi.display(pickup.status));
+        row("Requested", value(pickup.createdAt));
+        row("Pickup date", value(pickup.pickupDate));
 
         if (pickup.groupId > 0 && stops[1] > 0) {
             heading("Grouped pickup");
@@ -94,20 +107,16 @@ public class ResidentPickupDetailsActivity extends AppCompatActivity {
             row("Stops before you", String.valueOf(stops[3]));
         }
 
-        heading("Waste and request");
-        row("Waste type", value(pickup.wasteType));
-        row("Estimated size", value(pickup.category));
+        heading("Collection information");
         row("Expected range", sizeRange(pickup.category));
-        body("Estimated size is for planning only. Final price uses actual measured kilograms.");
-        if (pickup.weightKg > 0) row("Estimated weight", kg(pickup.weightKg));
-        if (pickup.measuredWeightKg > 0) row("Measured weight", kg(pickup.measuredWeightKg));
-        if ("Weight recorded".equalsIgnoreCase(pickup.status)) addConfirmationActions(pickup);
+        if ("weight_recorded".equals(PickupStatusUi.normalize(pickup.status))) addConfirmationActions(pickup);
         if (pickup.photoPath != null && !pickup.photoPath.trim().isEmpty()) {
             ImageView photo = new ImageView(this);
             photo.setScaleType(ImageView.ScaleType.CENTER_CROP);
             photo.setContentDescription("Waste photo");
             ImageUtils.loadAvatar(photo, pickup.photoPath);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(180));
+            photo.setOnClickListener(v -> showFullPhoto("Waste photo", pickup.photoPath));
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(96));
             params.topMargin = dp(10);
             content.addView(photo, params);
         }
@@ -117,11 +126,12 @@ public class ResidentPickupDetailsActivity extends AppCompatActivity {
             proof.setScaleType(ImageView.ScaleType.CENTER_CROP);
             proof.setContentDescription("Driver collection proof photo");
             ImageUtils.loadAvatar(proof, pickup.proofPhotoPath);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(180));
+            proof.setOnClickListener(v -> showFullPhoto("Collection proof", pickup.proofPhotoPath));
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(96));
             params.topMargin = dp(10); content.addView(proof, params);
         }
 
-        heading("Driver and vehicle");
+        heading("Driver"); /*
         row("Driver", driver != null ? value(driver.name) : "Not assigned");
         row("Phone", driver != null ? value(driver.phone) : "—");
         row("Vehicle plate", vehicle != null ? value(vehicle.plate)
@@ -129,7 +139,9 @@ public class ResidentPickupDetailsActivity extends AppCompatActivity {
         row("Vehicle type", vehicle != null ? value(vehicle.model)
                 : driver != null ? value(driver.vehicleInfo) : "—");
 
-        heading("Price and payment");
+        */ addDriverSummary(driver, vehicle);
+
+        heading("Payment / transaction");
         if (pickup.estimatedPriceMax > 0) row("Estimated price", String.format(Locale.US,
                 "TZS %,.0f – %,.0f", pickup.estimatedPriceMin, pickup.estimatedPriceMax));
         if (pickup.bookingFee > 0) row("Booking fee", tzs(pickup.bookingFee));
@@ -141,25 +153,125 @@ public class ResidentPickupDetailsActivity extends AppCompatActivity {
         if ("price_confirmed".equals(normalizedStatus)) addPaymentMethodAction(pickup);
         if ("payment_pending".equals(normalizedStatus)) loadPendingPaymentAction(pickup);
 
-        heading("Status timeline");
+        addTimeline(pickup.status); /*
         String[] timeline = {"Request submitted", "Driver assigned", "Accepted", "On the way",
                 "Arrived", "Collected", "Pending resident confirmation", "Completed"};
         int reached = timelineProgress(pickup.status);
         for (int i = 0; i < timeline.length; i++) body((i <= reached ? "✓  " : "○  ") + timeline[i]);
 
-        heading("Receipt");
+        */ heading("Receipt");
         if (pickup.finalPrice > 0 || "Completed".equalsIgnoreCase(pickup.status)) {
             Button receipt = new Button(this);
             receipt.setText("View receipt");
+            receipt.setTextColor(ContextCompat.getColor(this, R.color.color_secondary));
+            receipt.setBackgroundColor(0x00000000);
             receipt.setOnClickListener(v -> {
                 Intent intent = new Intent(this, ReceiptActivity.class);
                 intent.putExtra("pickupId", pickup.id);
                 startActivity(intent);
             });
             content.addView(receipt, new LinearLayout.LayoutParams(-1, dp(48)));
+            if ("completed".equals(PickupStatusUi.normalize(pickup.status)) && pickup.driverId > 0) addRatingAction(pickup);
         } else {
             body("Receipt will be available after pricing is finalized.");
         }
+    }
+
+    private void addRatingAction(PickupRow pickup) {
+        Button rate = new Button(this);
+        rate.setText("Rate driver");
+        rate.setTextColor(0xFFFFFFFF);
+        rate.setBackgroundTintList(android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(this, R.color.color_secondary)));
+        rate.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle("Rate your driver")
+                .setItems(new String[]{"★★★★★  Excellent", "★★★★☆  Very good", "★★★☆☆  Good", "★★☆☆☆  Fair", "★☆☆☆☆  Poor"},
+                        (dialog, which) -> submitRating(pickup.id, 5 - which)).show());
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, dp(48));
+        params.topMargin = dp(8); content.addView(rate, params);
+    }
+
+    private void submitRating(int pickupId, int rating) {
+        try { ApiClient.post("/pickups/" + pickupId + "/rating", session.getApiToken(),
+                new JSONObject().put("rating", rating), new ApiClient.JsonCallback() {
+                    public void onSuccess(JSONObject json) { runOnUiThread(() -> Toast.makeText(
+                            ResidentPickupDetailsActivity.this,
+                            json.optString("message", "Rating saved"), Toast.LENGTH_LONG).show()); }
+                    public void onError(String message) { runOnUiThread(() -> Toast.makeText(
+                            ResidentPickupDetailsActivity.this, message, Toast.LENGTH_LONG).show()); }
+                });
+        } catch (Exception error) { Toast.makeText(this, error.getMessage(), Toast.LENGTH_LONG).show(); }
+    }
+
+    private void addDriverSummary(UserAccount driver, VehicleRow vehicle) {
+        LinearLayout summary = new LinearLayout(this);
+        summary.setOrientation(LinearLayout.HORIZONTAL);
+        summary.setGravity(Gravity.CENTER_VERTICAL);
+        summary.setPadding(0, dp(6), 0, dp(6));
+
+        ImageView avatar = new ImageView(this);
+        avatar.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        avatar.setBackgroundResource(R.drawable.bg_circle_green_light);
+        ImageUtils.loadAvatar(avatar, driver != null ? driver.profileImagePath : null);
+        summary.addView(avatar, new LinearLayout.LayoutParams(dp(52), dp(52)));
+
+        LinearLayout text = new LinearLayout(this);
+        text.setOrientation(LinearLayout.VERTICAL);
+        TextView name = compactText(driver != null ? value(driver.name) : "Not assigned", 15, true);
+        String vehicleType = vehicle != null ? value(vehicle.model) : driver != null ? value(driver.vehicleInfo) : "—";
+        String plate = vehicle != null ? value(vehicle.plate) : driver != null ? value(driver.driverPlate) : "—";
+        TextView vehicleLine = compactText(vehicleType + " · " + plate, 13, false);
+        TextView phone = compactText(driver != null ? value(driver.phone) : "—", 13, false);
+        text.addView(name); text.addView(vehicleLine); text.addView(phone);
+        LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(0, -2, 1);
+        textParams.leftMargin = dp(12); summary.addView(text, textParams);
+
+        if (driver != null && driver.phone != null && !driver.phone.trim().isEmpty()) {
+            TextView call = compactText("Call", 14, true);
+            call.setTextColor(0xFF18B95A);
+            call.setPadding(dp(10), dp(10), 0, dp(10));
+            call.setOnClickListener(v -> startActivity(new Intent(Intent.ACTION_DIAL,
+                    Uri.parse("tel:" + driver.phone.trim()))));
+            summary.addView(call);
+        }
+        content.addView(summary);
+    }
+
+    private void addTimeline(String status) {
+        heading("Status");
+        LinearLayout steps = new LinearLayout(this);
+        steps.setOrientation(LinearLayout.VERTICAL);
+        steps.setVisibility(View.GONE);
+        String[] labels = {"Request submitted", "Driver assigned", "Accepted", "On the way",
+                "Arrived", "Collected", "Resident confirmed", "Completed"};
+        int reached = timelineProgress(status);
+        for (int index = 0; index < labels.length; index++) {
+            TextView step = compactText((index <= reached ? "✓  " : "○  ") + labels[index], 14, false);
+            step.setPadding(0, dp(5), 0, dp(5)); steps.addView(step);
+        }
+        TextView toggle = compactText(PickupStatusUi.display(status) + "     View timeline >", 14, true);
+        toggle.setTextColor(0xFF18B95A);
+        toggle.setPadding(0, dp(7), 0, dp(7));
+        toggle.setOnClickListener(v -> {
+            boolean show = steps.getVisibility() != View.VISIBLE;
+            steps.setVisibility(show ? View.VISIBLE : View.GONE);
+            toggle.setText(PickupStatusUi.display(status) + (show ? "     Hide timeline ↑" : "     View timeline >"));
+        });
+        content.addView(toggle); content.addView(steps);
+    }
+
+    private TextView compactText(String text, int size, boolean bold) {
+        TextView view = new TextView(this);
+        view.setText(text); view.setTextSize(size); view.setTextColor(0xFF333333);
+        if (bold) view.setTypeface(null, Typeface.BOLD);
+        return view;
+    }
+
+    private void showFullPhoto(String title, String path) {
+        ImageView image = new ImageView(this);
+        image.setAdjustViewBounds(true); image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        ImageUtils.loadAvatar(image, path);
+        new AlertDialog.Builder(this).setTitle(title).setView(image)
+                .setPositiveButton("Close", null).show();
     }
 
     private void heading(String text) {
@@ -170,9 +282,20 @@ public class ResidentPickupDetailsActivity extends AppCompatActivity {
     }
 
     private void row(String label, String value) {
-        TextView view = new TextView(this);
-        view.setText(label + "\n" + value); view.setTextSize(14); view.setTextColor(0xFF333333);
-        view.setPadding(0, dp(5), 0, dp(5)); content.addView(view);
+        LinearLayout line = new LinearLayout(this);
+        line.setOrientation(LinearLayout.HORIZONTAL);
+        line.setGravity(Gravity.CENTER_VERTICAL);
+        line.setPadding(0, dp(5), 0, dp(5));
+        TextView left = new TextView(this);
+        left.setText(label); left.setTextSize(14); left.setTextColor(0xFF666666);
+        TextView right = new TextView(this);
+        String displayValue = value(value);
+        if ("null".equalsIgnoreCase(displayValue.trim())) displayValue = "—";
+        right.setText(displayValue); right.setTextSize(14); right.setTextColor(0xFF222222);
+        right.setGravity(Gravity.END); right.setMaxLines(2);
+        line.addView(left, new LinearLayout.LayoutParams(0, -2, 0.42f));
+        line.addView(right, new LinearLayout.LayoutParams(0, -2, 0.58f));
+        content.addView(line);
     }
 
     private void body(String text) {
@@ -186,8 +309,9 @@ public class ResidentPickupDetailsActivity extends AppCompatActivity {
         confirm.setOnClickListener(v -> ApiClient.post("/pickups/" + pickup.id + "/confirm-collection", session.getApiToken(), new JSONObject(), new ApiClient.JsonCallback() {
             public void onSuccess(JSONObject json) { runOnUiThread(() -> {
                 Toast.makeText(ResidentPickupDetailsActivity.this, "Collection confirmed and final price calculated", Toast.LENGTH_LONG).show();
-                com.takago.app.network.ServerSyncManager.syncTracking(ResidentPickupDetailsActivity.this,
-                        ResidentPickupDetailsActivity.this::recreate);
+                com.takago.app.network.ServerSyncManager.applyPickupResponse(ResidentPickupDetailsActivity.this, json);
+                recreate();
+                com.takago.app.network.ServerSyncManager.syncTracking(ResidentPickupDetailsActivity.this, null);
             }); }
             public void onError(String message) { runOnUiThread(() -> Toast.makeText(ResidentPickupDetailsActivity.this, message, Toast.LENGTH_LONG).show()); }
         })); content.addView(confirm, new LinearLayout.LayoutParams(-1, dp(48)));
@@ -214,8 +338,9 @@ public class ResidentPickupDetailsActivity extends AppCompatActivity {
                             Toast.makeText(ResidentPickupDetailsActivity.this,
                                     json.optString("message", "Payment started"), Toast.LENGTH_LONG).show();
                             if (!checkout.isEmpty()) startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(checkout)));
-                            com.takago.app.network.ServerSyncManager.syncTracking(ResidentPickupDetailsActivity.this,
-                                    ResidentPickupDetailsActivity.this::recreate);
+                            dbHelper.updatePickupWorkflowState(pickup.id, "payment_pending", "pending");
+                            recreate();
+                            com.takago.app.network.ServerSyncManager.syncTracking(ResidentPickupDetailsActivity.this, null);
                         }); }
                         public void onError(String message) { runOnUiThread(() ->
                                 Toast.makeText(ResidentPickupDetailsActivity.this, message, Toast.LENGTH_LONG).show()); }
@@ -260,8 +385,9 @@ public class ResidentPickupDetailsActivity extends AppCompatActivity {
                         public void onSuccess(JSONObject json) { runOnUiThread(() -> {
                             Toast.makeText(ResidentPickupDetailsActivity.this,
                                     json.optString("message", "Payment confirmed"), Toast.LENGTH_LONG).show();
-                            com.takago.app.network.ServerSyncManager.syncTracking(ResidentPickupDetailsActivity.this,
-                                    ResidentPickupDetailsActivity.this::recreate);
+                            com.takago.app.network.ServerSyncManager.applyPickupResponse(ResidentPickupDetailsActivity.this, json);
+                            recreate();
+                            com.takago.app.network.ServerSyncManager.syncTracking(ResidentPickupDetailsActivity.this, null);
                         }); }
                         public void onError(String message) { runOnUiThread(() ->
                                 Toast.makeText(ResidentPickupDetailsActivity.this, message, Toast.LENGTH_LONG).show()); }

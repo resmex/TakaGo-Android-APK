@@ -177,7 +177,7 @@ public class DriverStartTripActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         if (mapManager != null) mapManager.onResume();
-        loadTrip();
+        com.takago.app.network.ServerSyncManager.syncTracking(this, this::loadTrip);
     }
 
     @Override
@@ -414,8 +414,6 @@ public class DriverStartTripActivity extends AppCompatActivity {
     }
 
     private void acceptTrip() {
-        dbHelper.acceptPickup(tripId, session.getUserId());
-        dbHelper.markPickupOnTheWayLocal(tripId, session.getUserId());
         com.takago.app.network.ServerSyncManager.acceptAndStart(this, tripId, error -> runOnUiThread(() -> {
             if (error != null) { Toast.makeText(this, error, Toast.LENGTH_LONG).show(); return; }
             Toast.makeText(this, "Trip started", Toast.LENGTH_SHORT).show(); loadTrip(); openNavigation();
@@ -425,7 +423,6 @@ public class DriverStartTripActivity extends AppCompatActivity {
     private void openNavigation() {
         PickupRow current = dbHelper.getTripById(tripId);
         if (current != null && "Accepted".equalsIgnoreCase(current.status)) {
-            dbHelper.markPickupOnTheWayLocal(tripId, session.getUserId());
             com.takago.app.network.ServerSyncManager.transition(this, tripId, "on_the_way", null, null, null,
                     error -> runOnUiThread(() -> { if (error != null) { Toast.makeText(this, error, Toast.LENGTH_LONG).show(); return; } launchNavigationMap(); }));
             return;
@@ -440,9 +437,15 @@ public class DriverStartTripActivity extends AppCompatActivity {
     }
 
     private void rejectTrip() {
-        dbHelper.rejectPickup(tripId, session.getUserId());
-        Toast.makeText(this, "Trip rejected", Toast.LENGTH_SHORT).show();
-        finish();
+        com.takago.app.network.ServerSyncManager.transition(this, tripId, "rejected", null, null,
+                "Rejected by assigned driver", error -> runOnUiThread(() -> {
+                    if (error != null) {
+                        Toast.makeText(this, error, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    Toast.makeText(this, "Trip rejected and returned for reassignment", Toast.LENGTH_SHORT).show();
+                    finish();
+                }));
     }
 
     private void markCollected() {
@@ -584,13 +587,15 @@ public class DriverStartTripActivity extends AppCompatActivity {
     }
 
     private void onScalePhotoSelected(String path) {
-        pendingScalePhotoPath = path;
+        String prepared=ImageUtils.prepareImageForUpload(this,path,"proof",ImageUtils.MAX_PICKUP_IMAGE_BYTES);
+        if(prepared==null){pendingScalePhotoPath=null;Toast.makeText(this,"Choose a valid JPG, PNG or WebP image up to 4 MB.",Toast.LENGTH_LONG).show();return;}
+        pendingScalePhotoPath = prepared;
         if (tvScalePhotoLabelRef != null) {
             tvScalePhotoLabelRef.setText("Scale photo added");
             tvScalePhotoLabelRef.setTextColor(0xFF2E7D32);
         }
-        if (path != null && tripId > 0) {
-            ApiClient.uploadPickupImage(session.getApiToken(), tripId, "proof", path,
+        if (tripId > 0) {
+            ApiClient.uploadPickupImage(session.getApiToken(), tripId, "proof", prepared,
                     new ApiClient.JsonCallback() {
                         public void onSuccess(JSONObject json) { runOnUiThread(() -> Toast.makeText(DriverStartTripActivity.this, "Proof photo saved", Toast.LENGTH_SHORT).show()); }
                         public void onError(String message) { runOnUiThread(() -> Toast.makeText(DriverStartTripActivity.this, "Proof photo upload failed: " + message, Toast.LENGTH_LONG).show()); }

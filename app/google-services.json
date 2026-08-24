@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "841839159661",
+    "project_id": "takago-b9bd6",
+    "storage_bucket": "takago-b9bd6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:841839159661:android:f70e492e853b56b57bd264",
+        "android_client_info": {
+          "package_name": "com.takago.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAoRwUiOV3ovVZ5Z45Al8UnCxGjOazGKj8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

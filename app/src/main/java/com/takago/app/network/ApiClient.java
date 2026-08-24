@@ -13,7 +13,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 public final class ApiClient {
-    public static String BASE_URL = "http://10.191.52.21/takago/public/api";
+    public static String BASE_URL = "http://192.168.1.196/takago/public/api";
     private ApiClient() {}
 
     public static String profileImageUrl(int userId) {
@@ -41,6 +41,7 @@ public final class ApiClient {
             try {
                 File photo = photoPath == null ? null : new File(photoPath);
                 if (photo == null || !photo.isFile()) throw new Exception("Selected image is unavailable.");
+                if (photo.length() > com.takago.app.common.ImageUtils.MAX_PICKUP_IMAGE_BYTES) throw new Exception("Photo must be 4 MB or smaller.");
                 connection = (HttpURLConnection) new URL(BASE_URL + "/pickups/" + pickupId + "/images").openConnection();
                 connection.setRequestMethod("POST"); connection.setConnectTimeout(10000); connection.setReadTimeout(30000);
                 connection.setDoOutput(true); connection.setRequestProperty("Accept", "application/json");
@@ -73,7 +74,7 @@ public final class ApiClient {
     public static void register(String name, String email, String phone, String ward,
                                 double latitude, double longitude, String password, LoginCallback cb) {
         authenticate("/register", new JSONObjectBuilder().put("name", name).put("email", email)
-                .put("phone", phone).put("ward_name", ward).put("latitude", latitude)
+                .put("phone", phone).put("terms_accepted", true).put("ward_name", ward).put("latitude", latitude)
                 .put("longitude", longitude).put("password", password).build(), cb);
     }
 
@@ -133,6 +134,7 @@ public final class ApiClient {
                         writePart(out, boundary, "password_confirmation", password);
                     }
                     File photo = photoPath == null ? null : new File(photoPath);
+                    if (photo != null && photo.isFile() && photo.length() > com.takago.app.common.ImageUtils.MAX_PROFILE_IMAGE_BYTES) throw new Exception("Profile photo must be 3 MB or smaller.");
                     if (photo != null && photo.isFile()) writeFilePart(out, boundary, "profile_image", photo);
                     out.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
                 }

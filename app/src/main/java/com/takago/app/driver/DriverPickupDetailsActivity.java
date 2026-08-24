@@ -20,6 +20,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -66,7 +67,7 @@ public class DriverPickupDetailsActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        loadDetails();
+        com.takago.app.network.ServerSyncManager.syncTracking(this, this::loadDetails);
     }
 
     private void loadDetails() {
@@ -77,6 +78,8 @@ public class DriverPickupDetailsActivity extends AppCompatActivity {
         }
         tripStatus = trip.status;
         tripResidentId = trip.residentId;
+        ImageView wastePhoto=findViewById(R.id.ivResidentWastePhoto);
+        if(trip.photoPath!=null&&!trip.photoPath.trim().isEmpty()){wastePhoto.setVisibility(View.VISIBLE);ImageUtils.loadAvatar(wastePhoto,trip.photoPath);}else wastePhoto.setVisibility(View.GONE);
 
         ((TextView) findViewById(R.id.tvDetailsCode)).setText("Pickup " + trip.code);
         ((TextView) findViewById(R.id.tvDetailsResidentName)).setText(
@@ -100,36 +103,32 @@ public class DriverPickupDetailsActivity extends AppCompatActivity {
     private void updateActionButton(String status) {
         View btnAction = findViewById(R.id.btnDetailsAction);
         TextView tvActionLabel = findViewById(R.id.tvDetailsActionLabel);
-
-        boolean isFinished = "Completed".equals(status) || "Cancelled".equals(status) || "Rejected".equals(status);
-        if (isFinished) {
-            btnAction.setVisibility(View.GONE);
-            return;
-        }
         btnAction.setVisibility(View.VISIBLE);
-
-        if ("Assigned".equals(status)) {
-            tvActionLabel.setText("Start trip");
-        } else {
-            tvActionLabel.setText("Continue trip");
-        }
+        PickupStatusUi.DriverAction action = PickupStatusUi.driverAction(status);
+        tvActionLabel.setText(PickupStatusUi.driverLabel(status));
+        btnAction.setEnabled(action != PickupStatusUi.DriverAction.NONE);
+        btnAction.setAlpha(action == PickupStatusUi.DriverAction.NONE ? 0.62f : 1f);
     }
 
     private void onActionClicked() {
-        if ("Assigned".equals(tripStatus)) {
-            dbHelper.acceptPickup(tripId, session.getUserId());
-            dbHelper.markPickupOnTheWayLocal(tripId, session.getUserId());
-            com.takago.app.network.ServerSyncManager.acceptAndStart(this, tripId,
-                    error -> runOnUiThread(() -> { if (error != null) { android.widget.Toast.makeText(this,error,android.widget.Toast.LENGTH_LONG).show(); return; } openTripNavigation(); }));
-            return;
+        switch (PickupStatusUi.driverAction(tripStatus)) {
+            case ACCEPT: transition("accepted", false); break;
+            case START_TRIP: transition("on_the_way", true); break;
+            case MARK_ARRIVED: openTripNavigation(); break;
+            case START_COLLECTION: case RECORD_WEIGHT:
+                startActivity(new Intent(this, DriverStartTripActivity.class).putExtra("tripId", tripId)); break;
+            case FINISH: transition("completed", false); break;
+            default: Toast.makeText(this, PickupStatusUi.driverLabel(tripStatus), Toast.LENGTH_SHORT).show();
         }
-        if ("Accepted".equalsIgnoreCase(tripStatus)) {
-            dbHelper.markPickupOnTheWayLocal(tripId, session.getUserId());
-            com.takago.app.network.ServerSyncManager.transition(this, tripId, "on_the_way", null, null, null,
-                    error -> runOnUiThread(() -> { if (error != null) { android.widget.Toast.makeText(this,error,android.widget.Toast.LENGTH_LONG).show(); return; } openTripNavigation(); }));
-            return;
-        }
-        openTripNavigation();
+    }
+
+    private void transition(String nextStatus, boolean openMap) {
+        com.takago.app.network.ServerSyncManager.transition(this, tripId, nextStatus, null, null, null,
+                error -> runOnUiThread(() -> {
+                    if (error != null) { Toast.makeText(this, error, Toast.LENGTH_LONG).show(); return; }
+                    com.takago.app.network.ServerSyncManager.syncTracking(this,
+                            () -> { loadDetails(); if (openMap) openTripNavigation(); });
+                }));
     }
 
     private void openTripNavigation() {

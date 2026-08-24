@@ -13,7 +13,9 @@ public final class LocationTextStyle {
     public static CharSequence twoLine(String primary, String ward) {
         String first = primary == null ? "" : primary.replace("Near ", "").trim();
         String second = ward == null ? "" : ward.trim();
+        if (first.isEmpty()) return second;
         if (second.isEmpty()) return first;
+        if (first.equalsIgnoreCase(second)) return first;
         SpannableString value = new SpannableString(first + "\n" + second);
         int start = first.length() + 1;
         value.setSpan(new RelativeSizeSpan(1.15f), start, value.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);

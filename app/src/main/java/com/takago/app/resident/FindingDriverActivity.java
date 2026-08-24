@@ -38,7 +38,7 @@ import com.takago.app.network.ServerSyncManager;
  */
 public class FindingDriverActivity extends AppCompatActivity {
 
-    private static final long POLL_INTERVAL_MS = 2000;
+    private static final long POLL_INTERVAL_MS = 2500;
 
     private DatabaseHelper dbHelper;
     private SessionManager session;

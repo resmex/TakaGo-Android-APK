@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -22,16 +21,18 @@
             <!-- GREEN HEADER -->
             <RelativeLayout
                 android:layout_width="match_parent"
-                android:layout_height="180dp"
+                android:layout_height="150dp"
                 android:background="@drawable/bg_header"
                 android:paddingStart="36dp"
-                android:paddingTop="58dp"
+                android:paddingTop="42dp"
                 android:paddingEnd="36dp">
 
                 <LinearLayout
                     android:id="@+id/layoutUserInfo"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    android:layout_toStartOf="@id/btnNotification"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -44,17 +45,11 @@
                         app:civ_border_width="2dp" />
 
                     <LinearLayout
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="12dp"
+                        android:layout_weight="1"
                         android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Driver"
-                            android:textColor="#E6FFFFFF"
-                            android:textSize="15sp" />
 
                         <TextView
                             android:id="@+id/tvUserName"
@@ -63,17 +58,30 @@
                             android:text="Joshua Swai"
                             android:textColor="@color/color_surface"
                             android:textSize="18sp"
-                            android:textStyle="bold" />
+                            android:textStyle="normal" />
 
                         <TextView
                             android:id="@+id/tvUserLocation"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:maxLines="2"
+                            android:ellipsize="end"
+                            android:maxLines="1"
                             android:text=""
                             android:textColor="#D8FFFFFF"
                             android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/tvUserWard"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="1dp"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:text="Ward unavailable"
+                            android:textColor="#D8FFFFFF"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
                 </LinearLayout>
 
@@ -81,8 +89,8 @@
                     android:id="@+id/btnNotification"
                     android:layout_width="54dp"
                     android:layout_height="54dp"
-                    android:layout_alignParentEnd="true"
-                    android:layout_alignTop="@id/layoutUserInfo">
+                    android:layout_alignTop="@id/layoutUserInfo"
+                    android:layout_alignParentEnd="true">
 
                     <ImageView
                         android:id="@+id/ivNotification"
@@ -139,7 +147,7 @@
 
                             <LinearLayout
                                 android:layout_width="0dp"
-                                android:layout_height="68dp"
+                                android:layout_height="64dp"
                                 android:layout_marginEnd="6dp"
                                 android:layout_weight="1"
                                 android:background="@drawable/bg_stat_navy_small"
@@ -158,14 +166,14 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="TODAY"
+                                    android:text="Pickups today"
                                     android:textColor="@color/color_white_overlay"
-                                    android:textSize="10sp" />
+                                    android:textSize="11sp" />
                             </LinearLayout>
 
                             <LinearLayout
                                 android:layout_width="0dp"
-                                android:layout_height="68dp"
+                                android:layout_height="64dp"
                                 android:layout_marginStart="6dp"
                                 android:layout_marginEnd="6dp"
                                 android:layout_weight="1"
@@ -185,14 +193,14 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="DISTANCE"
+                                    android:text="Distance today"
                                     android:textColor="@color/color_white_overlay"
-                                    android:textSize="10sp" />
+                                    android:textSize="11sp" />
                             </LinearLayout>
 
                             <LinearLayout
                                 android:layout_width="0dp"
-                                android:layout_height="68dp"
+                                android:layout_height="64dp"
                                 android:layout_marginStart="6dp"
                                 android:layout_weight="1"
                                 android:background="@drawable/bg_stat_navy_small"
@@ -226,16 +234,16 @@
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
-                                    android:text="RATING"
+                                    android:text="Rating"
                                     android:textColor="@color/color_white_overlay"
-                                    android:textSize="10sp" />
+                                    android:textSize="11sp" />
                             </LinearLayout>
                         </LinearLayout>
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="22dp"
+                            android:layout_marginTop="14dp"
                             android:text="Next pickup"
                             android:textColor="@color/color_text_secondary"
                             android:textSize="15sp" />
@@ -244,7 +252,7 @@
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="10dp"
+                            android:layout_marginTop="6dp"
                             android:gravity="center_vertical"
                             android:orientation="horizontal">
 
@@ -308,13 +316,14 @@
                         <RelativeLayout
                             android:id="@+id/btnStartTrip"
                             android:layout_width="match_parent"
-                            android:layout_height="56dp"
-                            android:layout_marginTop="22dp"
+                            android:layout_height="50dp"
+                            android:layout_marginTop="14dp"
                             android:background="@drawable/bg_admin_green_box"
                             android:paddingStart="22dp"
                             android:paddingEnd="22dp">
 
                             <TextView
+                                android:id="@+id/tvStartTripLabel"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_centerVertical="true"
@@ -340,8 +349,8 @@
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="28dp"
-                    android:layout_marginBottom="12dp">
+                    android:layout_marginTop="18dp"
+                    android:layout_marginBottom="8dp">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -357,7 +366,7 @@
                         android:layout_height="wrap_content"
                         android:layout_alignParentEnd="true"
                         android:layout_centerVertical="true"
-                        android:text="see all"
+                        android:text="See all"
                         android:textColor="#2E7D32"
                         android:textSize="15sp"
                         android:textStyle="bold" />
@@ -367,10 +376,16 @@
                     android:id="@+id/tvNoRequestsToday"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:paddingTop="40dp"
-                    android:paddingBottom="40dp"
-                    android:text="No requests assigned today."
+                    android:background="@drawable/bg_card"
+                    android:drawableStart="@drawable/ic_clipboard"
+                    android:drawablePadding="12dp"
+                    android:gravity="center_vertical"
+                    android:minHeight="76dp"
+                    android:paddingStart="18dp"
+                    android:paddingTop="14dp"
+                    android:paddingEnd="18dp"
+                    android:paddingBottom="14dp"
+                    android:text="No requests assigned today.\nNew assignments will appear here."
                     android:textColor="@color/color_text_hint"
                     android:textSize="14sp"
                     android:visibility="gone" />

@@ -10,6 +10,8 @@ import android.os.Looper;
 import android.util.Log;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.location.Address;
+import android.location.Geocoder;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,13 +23,16 @@ import androidx.core.content.ContextCompat;
 
 import com.takago.app.R;
 import com.takago.app.common.InsetsUtils;
+import com.takago.app.common.LocationTextStyle;
 import com.takago.app.common.PickupAddressFormatter;
+import com.takago.app.common.PickupStatusUi;
 import com.takago.app.data.model.PickupRow;
 import com.takago.app.data.model.RouteStopRow;
 import com.takago.app.data.model.UserAccount;
 import com.takago.app.db.DatabaseHelper;
 import com.takago.app.db.SessionManager;
 import com.takago.app.location.LatLngPoint;
+import com.takago.app.location.ReadableLocationManager;
 import com.takago.app.location.MapMarkerFactory;
 import com.takago.app.location.RoutingService;
 import com.takago.app.location.map.MapEngine;
@@ -39,6 +44,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.io.IOException;
 
 public class ResidentTrackActivity extends AppCompatActivity {
     private static final String TAG = "ResidentTracking";
@@ -76,6 +82,7 @@ public class ResidentTrackActivity extends AppCompatActivity {
     private boolean routeRequestInFlight;
     private int automaticRouteFailures;
     private int renderedStopCount;
+    private double lastAddressDriverLat = Double.NaN, lastAddressDriverLng = Double.NaN;
 
     private final Runnable refreshRunnable = new Runnable() {
         @Override public void run() {
@@ -127,8 +134,7 @@ public class ResidentTrackActivity extends AppCompatActivity {
         activeDriverId = activePickup != null ? activePickup.driverId : -1;
         pickupLat = activePickup != null ? activePickup.latitude : Double.NaN;
         pickupLng = activePickup != null ? activePickup.longitude : Double.NaN;
-        tvTrackPickupLocation.setText(activePickup != null
-                ? PickupAddressFormatter.styledTwoLine(activePickup) : "");
+        if (activePickup == null) tvTrackPickupLocation.setText("Driver location is not available yet");
         showHomeCardEtaDistance();
     }
 
@@ -147,6 +153,7 @@ public class ResidentTrackActivity extends AppCompatActivity {
         }
 
         LatLngPoint pickup = new LatLngPoint(pickupLat, pickupLng);
+        mapEngine.setCenter(pickup, 15f);
         if (activePickup != null && activePickup.groupId > 0) {
             mapEngine.removeMarker("pickup");
             renderGroupedStops();
@@ -155,6 +162,14 @@ public class ResidentTrackActivity extends AppCompatActivity {
             mapEngine.removeMarker("pickup");
         }
 
+        if (activePickup != null && "arrived".equals(PickupStatusUi.normalize(activePickup.status))) {
+            mapEngine.setCenter(pickup, 15f);
+            mapEngine.clearRoute();
+            tvArrivalTime.setText("Driver Arrived");
+            tvTrackDistance.setText("At pickup location");
+            setState(TrackingState.ROUTE_AVAILABLE);
+            return;
+        }
         if (activePickup == null || !isTrackableStatus(activePickup.status)) {
             mapEngine.setCenter(pickup, 15f);
             mapEngine.removeMarker("driver");
@@ -175,8 +190,10 @@ public class ResidentTrackActivity extends AppCompatActivity {
         Log.i(TAG, "Latest DB pickup coordinates: lat=" + pickupLat + ", lng=" + pickupLng);
         lastKnownDriverLat = driver.latitude;
         lastKnownDriverLng = driver.longitude;
+        updateDriverAddress(driver);
         mapEngine.updateMovingMarker("driver", new LatLngPoint(driver.latitude, driver.longitude),
-                ContextCompat.getDrawable(this, R.drawable.ic_truck_outline), true);
+                MapMarkerFactory.driverTruck(this), true);
+        fitCamera();
 
         if (RoutingService.areSameLocation(driver.latitude, driver.longitude, pickupLat, pickupLng)) {
             mapEngine.clearRoute();
@@ -274,8 +291,7 @@ public class ResidentTrackActivity extends AppCompatActivity {
         if (status == null) return false;
         String normalized = status.trim().toLowerCase(Locale.US).replace(' ', '_');
         return normalized.equals("assigned") || normalized.equals("accepted")
-                || normalized.equals("on_the_way") || normalized.equals("arrived")
-                || normalized.equals("collecting");
+                || normalized.equals("on_the_way");
     }
 
     private void retryRoute() {
@@ -410,7 +426,41 @@ public class ResidentTrackActivity extends AppCompatActivity {
             return;
         }
         mapEngine.addOrUpdateMarker("resident", new LatLngPoint(pickupLat, pickupLng),
-                ContextCompat.getDrawable(this, R.drawable.ic_person), 0.5f, 0.5f, false);
+                MapMarkerFactory.residentWaste(this), 0.5f, 0.5f, false);
+    }
+
+    private void updateDriverAddress(UserAccount driver) {
+        String cached = ReadableLocationManager.primary(driver);
+        if (!cached.isEmpty() && !cached.equalsIgnoreCase(ReadableLocationManager.wardLine(driver))) {
+            tvTrackPickupLocation.setText("Driver is at: " + cached);
+        } else {
+            tvTrackPickupLocation.setText(String.format(Locale.US,
+                    "Driver is at: %.5f, %.5f", driver.latitude, driver.longitude));
+        }
+        if (!Double.isNaN(lastAddressDriverLat)
+                && RoutingService.haversineKm(lastAddressDriverLat, lastAddressDriverLng,
+                driver.latitude, driver.longitude) < MIN_REROUTE_DISTANCE_KM) return;
+        lastAddressDriverLat = driver.latitude;
+        lastAddressDriverLng = driver.longitude;
+        final double lat = driver.latitude, lng = driver.longitude;
+        new Thread(() -> {
+            String label = null;
+            try {
+                List<Address> rows = new Geocoder(this, Locale.getDefault()).getFromLocation(lat, lng, 1);
+                if (rows != null && !rows.isEmpty()) {
+                    Address address = rows.get(0);
+                    label = address.getAddressLine(0);
+                    if (label == null || label.trim().isEmpty()) label = address.getFeatureName();
+                }
+            } catch (IOException | IllegalArgumentException ignored) { }
+            final String resolved = label;
+            runOnUiThread(() -> {
+                if (Math.abs(lastKnownDriverLat - lat) > 0.00001
+                        || Math.abs(lastKnownDriverLng - lng) > 0.00001) return;
+                if (resolved != null && !resolved.trim().isEmpty())
+                    tvTrackPickupLocation.setText("Driver is at: " + resolved.trim());
+            });
+        }).start();
     }
 
     private void renderGroupedStops() {

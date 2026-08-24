@@ -37,6 +37,10 @@ Thumbs.db
 # Signing / private keys
 *.jks
 *.keystore
+*.pem
+*.key
+*service-account*.json
+firebase-adminsdk*.json
 
 # Secrets
 .env

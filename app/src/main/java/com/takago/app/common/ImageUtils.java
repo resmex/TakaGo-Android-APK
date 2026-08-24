@@ -4,6 +4,8 @@ import com.takago.app.R;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
+import android.media.ExifInterface;
 import android.net.Uri;
 import android.util.LruCache;
 import android.webkit.MimeTypeMap;
@@ -16,6 +18,8 @@ import java.io.InputStream;
 
 /** Loads a resident/driver's saved profile photo, falling back to a clean default icon. */
 public class ImageUtils {
+    public static final long MAX_PICKUP_IMAGE_BYTES = 4L * 1024L * 1024L;
+    public static final long MAX_PROFILE_IMAGE_BYTES = 3L * 1024L * 1024L;
     private static final LruCache<String, Bitmap> AVATAR_CACHE = new LruCache<>(20);
 
     public static void loadAvatar(ImageView imageView, String profileImagePath) {
@@ -88,5 +92,18 @@ public class ImageUtils {
         } catch (IOException e) {
             return null;
         }
+    }
+
+    /** Validates an image and, when necessary, creates an upload-safe JPEG no larger than maxBytes. */
+    public static String prepareImageForUpload(Context context, String path, String prefix, long maxBytes) {
+        if (path == null) return null; File source = new File(path); if (!source.isFile()) return null;
+        BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;BitmapFactory.decodeFile(path,bounds);
+        if(bounds.outWidth<=0||bounds.outHeight<=0)return null;
+        if(source.length()<=maxBytes)return source.getAbsolutePath();
+        int sample=1;while(bounds.outWidth/sample>2048||bounds.outHeight/sample>2048)sample*=2;
+        BitmapFactory.Options options=new BitmapFactory.Options();options.inSampleSize=sample;Bitmap bitmap=BitmapFactory.decodeFile(path,options);if(bitmap==null)return null;
+        try{int orientation=new ExifInterface(path).getAttributeInt(ExifInterface.TAG_ORIENTATION,ExifInterface.ORIENTATION_NORMAL);float degrees=orientation==ExifInterface.ORIENTATION_ROTATE_90?90:orientation==ExifInterface.ORIENTATION_ROTATE_180?180:orientation==ExifInterface.ORIENTATION_ROTATE_270?270:0;if(degrees!=0){Matrix matrix=new Matrix();matrix.postRotate(degrees);Bitmap rotated=Bitmap.createBitmap(bitmap,0,0,bitmap.getWidth(),bitmap.getHeight(),matrix,true);if(rotated!=bitmap)bitmap.recycle();bitmap=rotated;}}catch(IOException ignored){}
+        File output=new File(context.getExternalFilesDir("Pictures"),prefix+"_upload_"+System.currentTimeMillis()+".jpg");int quality=92;
+        try{do{try(FileOutputStream stream=new FileOutputStream(output,false)){bitmap.compress(Bitmap.CompressFormat.JPEG,quality,stream);}quality-=8;}while(output.length()>maxBytes&&quality>=52);bitmap.recycle();return output.length()>0&&output.length()<=maxBytes?output.getAbsolutePath():null;}catch(IOException error){bitmap.recycle();return null;}
     }
 }

@@ -138,7 +138,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp">
 
-                    <CheckBox
+                    <com.google.android.material.checkbox.MaterialCheckBox
                         android:id="@+id/checkboxRememberMe"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -147,8 +147,7 @@
                         android:text="Remember me"
                         android:textSize="13sp"
                         android:textColor="@color/color_text_body"
-                        android:buttonTint="@null"
-                        android:button="@drawable/checkbox_selector" />
+                        app:buttonTint="@color/color_primary" />
 
                     <TextView
                         android:id="@+id/tvForgotPassword"

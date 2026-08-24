@@ -176,19 +176,20 @@ public class ResidentProfileActivity extends AppCompatActivity {
     }
 
     private void saveProfileImage(String path) {
-        if (path == null) {
+        final String preparedPath=ImageUtils.prepareImageForUpload(this,path,"profile",ImageUtils.MAX_PROFILE_IMAGE_BYTES);
+        if (preparedPath == null) {
             Toast.makeText(this, "Could not load that photo", Toast.LENGTH_SHORT).show();
             return;
         }
         UserAccount resident = dbHelper.getUserById(session.getUserId());
         if (resident == null) return;
-        ImageUtils.loadAvatar(ivProfileAvatar, path);
+        ImageUtils.loadAvatar(ivProfileAvatar, preparedPath);
         com.takago.app.network.ApiClient.updateProfile(session.getApiToken(), resident.name,
-                resident.phone, resident.email, "", path,
+                resident.phone, resident.email, "", preparedPath,
                 new com.takago.app.network.ApiClient.JsonCallback() {
                     public void onSuccess(org.json.JSONObject json) { runOnUiThread(() -> {
                         org.json.JSONObject user = json.optJSONObject("user");
-                        String remotePhoto = user != null ? user.optString("profile_image_url", path) : path;
+                        String remotePhoto = user != null ? user.optString("profile_image_url", preparedPath) : preparedPath;
                         dbHelper.updateProfileImage(session.getUserId(), remotePhoto);
                         Toast.makeText(ResidentProfileActivity.this, "Profile photo updated", Toast.LENGTH_SHORT).show();
                     }); }
@@ -201,6 +202,7 @@ public class ResidentProfileActivity extends AppCompatActivity {
 
     private void setupClicks() {
         addTransactionsShortcut();
+        addComplaintsShortcut();
         ivProfileAvatar.setOnClickListener(v -> showPhotoChooser());
 
         findViewById(R.id.btnSignOut).setOnClickListener(v -> {
@@ -221,7 +223,9 @@ public class ResidentProfileActivity extends AppCompatActivity {
         findViewById(R.id.rowPrivacy).setOnClickListener(v ->
                 Toast.makeText(this, "Privacy & security screen coming soon", Toast.LENGTH_SHORT).show());
         findViewById(R.id.rowHelp).setOnClickListener(v ->
-                Toast.makeText(this, "Help centre screen coming soon", Toast.LENGTH_SHORT).show());
+                startActivity(new Intent(this, InfoActivity.class)
+                        .putExtra(InfoActivity.EXTRA_TITLE, "Help Centre")
+                        .putExtra(InfoActivity.EXTRA_BODY, "Need help with takaGo?\n\n• For pickup or collection problems, open Complaints from your profile and submit the details.\n• To contact an assigned driver, open the active pickup and tap Call or Message. takaGo opens your phone dialer or SMS app; it never places a call or sends a message without you.\n• For schedule questions, open Upcoming schedules and tap the driver details to open the dialer.\n• Check Notifications for assignment, arrival, payment, complaint and completion updates.")));
 
         findViewById(R.id.navHome).setOnClickListener(v -> {
             startActivity(new Intent(this, ResidentHomeActivity.class));
@@ -247,5 +251,9 @@ public class ResidentProfileActivity extends AppCompatActivity {
         row.setTextSize(14); row.setTextColor(0xFF1A1A1A); row.setGravity(android.view.Gravity.CENTER_VERTICAL);
         row.setPadding(16,0,16,0); row.setOnClickListener(v -> startActivity(new Intent(this, TransactionHistoryActivity.class)));
         parent.addView(row, parent.indexOfChild(notifications), new android.view.ViewGroup.LayoutParams(-1, (int)(56*getResources().getDisplayMetrics().density)));
+    }
+    private void addComplaintsShortcut() {
+        View notifications=findViewById(R.id.rowNotifications);android.view.ViewGroup parent=(android.view.ViewGroup)notifications.getParent();
+        TextView row=new TextView(this);row.setText("Complaints                                      ›");row.setTextSize(14);row.setTextColor(0xFF1A1A1A);row.setGravity(android.view.Gravity.CENTER_VERTICAL);row.setPadding(16,0,16,0);row.setOnClickListener(v->startActivity(new Intent(this,ResidentComplaintsActivity.class)));parent.addView(row,parent.indexOfChild(notifications),new android.view.ViewGroup.LayoutParams(-1,(int)(56*getResources().getDisplayMetrics().density)));
     }
 }

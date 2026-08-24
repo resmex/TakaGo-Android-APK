@@ -340,6 +340,9 @@ public class ResidentRequestPickupActivity extends AppCompatActivity {
     }
 
     private void applyOptionStyle(ImageView icon, TextView label, boolean selected) {
+        View option = (View) icon.getParent();
+        option.setBackgroundResource(selected
+                ? R.drawable.bg_size_option_selected : R.drawable.bg_size_option_unselected);
         if (selected) {
             icon.setBackgroundResource(R.drawable.bg_circle_green_solid);
             icon.setColorFilter(0xFFFFFFFF);
@@ -383,11 +386,13 @@ public class ResidentRequestPickupActivity extends AppCompatActivity {
     }
 
     private void onPhotoSelected(String path) {
-        pendingPhotoPath = path;
-        tvPhotoLabel.setText("Photo added");
+        String prepared=ImageUtils.prepareImageForUpload(this,path,"pickup",ImageUtils.MAX_PICKUP_IMAGE_BYTES);
+        if(prepared==null){pendingPhotoPath=null;Toast.makeText(this,"Choose a valid JPG, PNG or WebP image up to 4 MB.",Toast.LENGTH_LONG).show();return;}
+        pendingPhotoPath = prepared;
+        tvPhotoLabel.setText("Waste photo added (maximum 4 MB)");
         tvPhotoLabel.setTextColor(0xFF2E7D32);
         ivPhotoThumbnail.setVisibility(View.VISIBLE);
-        ImageUtils.loadAvatar(ivPhotoThumbnail, path);
+        ImageUtils.loadAvatar(ivPhotoThumbnail, prepared);
     }
 
     private void confirmPickup() {

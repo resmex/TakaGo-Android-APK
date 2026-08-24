@@ -3581,7 +3581,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         SQLiteDatabase db = getReadableDatabase();
         String today = daysAgo(0);
         Cursor c = db.rawQuery("SELECT COUNT(*) FROM pickups WHERE driver_id = ? AND " +
-                        "(date(created_at) = date(?) OR date(completed_at) = date(?) OR date(pickup_date) = date(?))",
+                        "(LOWER(REPLACE(status,' ','_')) IN ('assigned','accepted','on_the_way','arrived','collecting','weight_recorded','resident_confirmation','price_confirmed','payment_pending','paid') " +
+                        "OR date(created_at) = date(?) OR date(completed_at) = date(?) OR date(pickup_date) = date(?))",
                 new String[]{String.valueOf(driverId), today, today, today});
         int count = c.moveToFirst() ? c.getInt(0) : 0;
         c.close();
@@ -3636,7 +3637,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         if ("Today".equals(filter)) {
             String today = daysAgo(0);
-            where += " AND (date(created_at) = date(?) OR date(completed_at) = date(?) OR date(pickup_date) = date(?))";
+            where += " AND (LOWER(REPLACE(status,' ','_')) IN ('assigned','accepted','on_the_way','arrived','collecting','weight_recorded','resident_confirmation','price_confirmed','payment_pending','paid') " +
+                    "OR date(created_at) = date(?) OR date(completed_at) = date(?) OR date(pickup_date) = date(?))";
             args.add(today); args.add(today); args.add(today);
         } else if ("This week".equals(filter)) {
             where += " AND pickup_date >= ?";
@@ -3645,7 +3647,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         Cursor c = db.rawQuery(
                 "SELECT " + DRIVER_PICKUP_COLUMNS + " " +
-                        "FROM pickups WHERE " + where + " ORDER BY pickup_date DESC, time_text ASC",
+                        "FROM pickups WHERE " + where + " ORDER BY id DESC",
                 args.toArray(new String[0]));
         while (c.moveToNext()) {
             list.add(readDriverPickupRow(c));
@@ -3733,6 +3735,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         com.takago.app.network.ServerSyncManager.pushPickupStatus(appContext, tripId, "completed", null, null);
     }
 
+    /** Applies an already-confirmed server workflow state without waiting for the next poll. */
+    public void updatePickupWorkflowState(int pickupId, String status, String paymentStatus) {
+        ContentValues values = new ContentValues();
+        if (status != null && !status.trim().isEmpty()) values.put("status", title(status).replace("_", " "));
+        if (paymentStatus != null && !paymentStatus.trim().isEmpty()) values.put("payment_status", title(paymentStatus));
+        if (values.size() > 0) getWritableDatabase().update("pickups", values, "id = ?", new String[]{String.valueOf(pickupId)});
+    }
+
     private static final String DRIVER_PICKUP_COLUMNS =
             "id, code, ward, status, pickup_date, weight_kg, time_text, distance_km, eta_min, resident_display_name, " +
                     "latitude, longitude, driver_id, timeout_at, assigned_vehicle_id, driver_response_status, accepted_at, " +
@@ -3740,7 +3750,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     "estimated_price_max, measured_weight_kg, included_weight_kg, rate_per_kg, distance_fee, " +
                     "waste_type_multiplier, final_price, scale_photo_path, pricing_status, payment_status, booking_fee, " +
                     "place_id, ward_id, group_id, stop_order, encoded_polyline, route_distance_meters, route_duration_seconds, route_calculated_at, " +
-                    "house_number, street_name, formatted_address, place_name, plus_code";
+                    "house_number, street_name, formatted_address, place_name, plus_code, proof_photo_path";
 
     private PickupRow readDriverPickupRow(Cursor c) {
         PickupRow row = new PickupRow();
@@ -4383,7 +4393,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 } else if ("vehicles".equals(resource)) {
                     cv.put("plate",row.optString("registration_number",""));cv.put("model",row.optString("type",""));cv.put("capacity",row.optString("capacity_kg",""));cv.put("status",title(row.optString("status","pending")));putInt(cv,"operator_id",row);putInt(cv,"ward_id",row);putInt(cv,"municipality_id",row);cv.put("rejection_reason",row.optString("rejection_reason",""));db.insertWithOnConflict("vehicles",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
                 } else if ("pickups".equals(resource)) {
-                    cv.put("code",row.optString("code",""));cv.put("category",row.optString("waste_type","Household"));cv.put("waste_type",row.optString("waste_type","Household"));cv.put("status",title(row.optString("status","pending")).replace("_"," "));cv.put("address",row.optString("address",""));cv.put("created_at",row.optString("created_at",""));cv.put("completed_at",row.optString("completed_at",""));String serverPickupDate=row.optString("scheduled_at",row.optString("created_at",""));cv.put("pickup_date",serverPickupDate.length()>=10?serverPickupDate.substring(0,10):serverPickupDate);putInt(cv,"resident_id",row);putInt(cv,"driver_id",row);putIntAs(cv,"assigned_vehicle_id","vehicle_id",row);String pickupWardName=row.optString("ward_name","");int pickupLocalWardId=findWardIdByName(pickupWardName);if(pickupLocalWardId>0){cv.put("ward_id",pickupLocalWardId);cv.put("ward",pickupWardName);}putDouble(cv,"latitude",row);putDouble(cv,"longitude",row);putDouble(cv,"distance_km",row);putInt(cv,"eta_min",row);putDoubleAs(cv,"measured_weight_kg","weight_kg",row);putDouble(cv,"included_weight_kg",row);putDouble(cv,"rate_per_kg",row);putDouble(cv,"booking_fee",row);putDouble(cv,"distance_fee",row);putDouble(cv,"waste_type_multiplier",row);putDouble(cv,"final_price",row);cv.put("pricing_status",title(row.optString("pricing_status","estimated")));cv.put("payment_status",title(row.optString("payment_status","unpaid")));cv.put("driver_response_status",title(row.optString("driver_response_status","")));cv.put("timeout_at",row.optString("manual_assignment_available_at",""));cv.put("cancel_reason",row.optString("cancel_reason",""));String requestPhoto=row.optString("photo_path","");String proofPhoto=row.optString("proof_photo_path","");cv.put("photo_path",requestPhoto.isEmpty()?"":com.takago.app.network.ApiClient.pickupImageUrl(id,"request",requestPhoto));cv.put("proof_photo_path",proofPhoto.isEmpty()?"":com.takago.app.network.ApiClient.pickupImageUrl(id,"proof",proofPhoto));if(pickupLocalWardId<=0)cv.put("ward",pickupWardName);cv.put("resident_display_name",lookupName(db,"users",row.optInt("resident_id")));preserveLocalRoute(db,id,cv);db.insertWithOnConflict("pickups",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
+                    cv.put("code",row.optString("code",""));cv.put("category",row.optString("size",""));cv.put("waste_type",row.optString("waste_type","Household"));cv.put("status",title(row.optString("status","pending")).replace("_"," "));cv.put("address",row.optString("address",""));cv.put("created_at",row.optString("created_at",""));cv.put("completed_at",row.optString("completed_at",""));String serverPickupDate=row.optString("scheduled_at",row.optString("created_at",""));cv.put("pickup_date",serverPickupDate.length()>=10?serverPickupDate.substring(0,10):serverPickupDate);putInt(cv,"resident_id",row);putInt(cv,"driver_id",row);putIntAs(cv,"assigned_vehicle_id","vehicle_id",row);String pickupWardName=row.optString("ward_name","");int pickupLocalWardId=findWardIdByName(pickupWardName);if(pickupLocalWardId>0){cv.put("ward_id",pickupLocalWardId);cv.put("ward",pickupWardName);}putDouble(cv,"latitude",row);putDouble(cv,"longitude",row);putDouble(cv,"distance_km",row);putInt(cv,"eta_min",row);putDoubleAs(cv,"measured_weight_kg","weight_kg",row);putDouble(cv,"included_weight_kg",row);putDouble(cv,"rate_per_kg",row);putDouble(cv,"booking_fee",row);putDouble(cv,"distance_fee",row);putDouble(cv,"waste_type_multiplier",row);putDouble(cv,"final_price",row);cv.put("pricing_status",title(row.optString("pricing_status","estimated")));cv.put("payment_status",title(row.optString("payment_status","unpaid")));cv.put("driver_response_status",title(row.optString("driver_response_status","")));cv.put("timeout_at",row.optString("manual_assignment_available_at",""));cv.put("cancel_reason",row.optString("cancel_reason",""));String requestPhoto=row.optString("photo_path","");String proofPhoto=row.optString("proof_photo_path","");cv.put("photo_path",requestPhoto.isEmpty()?"":com.takago.app.network.ApiClient.pickupImageUrl(id,"request",requestPhoto));cv.put("proof_photo_path",proofPhoto.isEmpty()?"":com.takago.app.network.ApiClient.pickupImageUrl(id,"proof",proofPhoto));if(pickupLocalWardId<=0)cv.put("ward",pickupWardName);cv.put("resident_display_name",lookupName(db,"users",row.optInt("resident_id")));preserveLocalRoute(db,id,cv);db.insertWithOnConflict("pickups",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
                 } else if ("notifications".equals(resource)) {
                     putInt(cv,"user_id",row);cv.put("title",row.optString("title",""));cv.put("message",row.optString("message",""));cv.put("type",row.optString("type","info"));cv.put("created_at",row.optString("created_at",""));cv.put("is_read",row.isNull("read_at")?0:1);db.insertWithOnConflict("notifications",null,cv,SQLiteDatabase.CONFLICT_REPLACE);
                 } else if ("pricing_settings".equals(resource)) {

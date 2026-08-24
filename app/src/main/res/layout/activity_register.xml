@@ -139,7 +139,7 @@
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Terms Checkbox -->
-                <CheckBox
+                <com.google.android.material.checkbox.MaterialCheckBox
                     android:id="@+id/checkboxTerms"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -147,8 +147,7 @@
                     android:text="I agree to the Terms of Service and Privacy Policy"
                     android:textSize="13sp"
                     android:textColor="@color/color_text_body"
-                    android:buttonTint="@null"
-                    android:button="@drawable/checkbox_selector" />
+                    app:buttonTint="@color/color_primary" />
 
                 <!-- Create Account Button -->
                 <Button

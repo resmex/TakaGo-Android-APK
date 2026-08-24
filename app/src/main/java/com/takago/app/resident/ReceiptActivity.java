@@ -19,6 +19,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.graphics.Paint;
 import android.graphics.pdf.PdfDocument;
+import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 import android.widget.LinearLayout;
@@ -69,12 +70,14 @@ public class ReceiptActivity extends AppCompatActivity {
         UserAccount driver = pickup.driverId != 0 ? dbHelper.getUserById(pickup.driverId) : null;
 
         ((TextView) findViewById(R.id.tvReceiptCode)).setText(pickup.code);
-        ((TextView) findViewById(R.id.tvReceiptFinalPrice)).setText(formatTzs(pickup.finalPrice));
+        ((TextView) findViewById(R.id.tvTotalPaid)).setText(formatTzs(pickup.finalPrice));
 
-        TextView tvStatus = findViewById(R.id.tvReceiptPaymentStatus);
-        tvStatus.setText(pickup.paymentStatus != null ? pickup.paymentStatus : "Unpaid");
+        TextView tvStatus = findViewById(R.id.chipPaymentStatus);
+        tvStatus.setText("Paid".equalsIgnoreCase(pickup.paymentStatus)
+                ? "✓  Payment Completed" : clean(pickup.paymentStatus, "Unpaid"));
+        findViewById(R.id.btnDownloadReceipt).setOnClickListener(v -> saveReceiptPdf(pickup));
 
-        LinearLayout detailsContainer = findViewById(R.id.receiptDetailsContainer);
+        /* LinearLayout detailsContainer = findViewById(R.id.receiptDetailsContainer);
         addRow(detailsContainer, "Request ID", pickup.code);
         addRow(detailsContainer, "Resident", resident != null ? resident.name : (pickup.residentDisplayName != null ? pickup.residentDisplayName : "-"));
         addRow(detailsContainer, "Driver", driver != null ? driver.name : "-");
@@ -120,7 +123,41 @@ public class ReceiptActivity extends AppCompatActivity {
         saveParams.topMargin = dp(10);
         save.setLayoutParams(saveParams);
         save.setOnClickListener(v -> saveReceiptPdf(pickup));
-        priceContainer.addView(save);
+        priceContainer.addView(save); */
+        bindReceiptViews(pickup, resident, driver);
+    }
+
+    private void bindReceiptViews(PickupRow pickup, UserAccount resident, UserAccount driver) {
+        bindRow(R.id.rowRequestId, "Request ID", pickup.code);
+        bindRow(R.id.rowResident, "Resident", resident != null ? resident.name : pickup.residentDisplayName);
+        bindRow(R.id.rowDriver, "Driver", driver != null ? driver.name : null);
+        bindRow(R.id.rowWard, "Ward", pickup.ward);
+        bindRow(R.id.rowPickupAddress, "Pickup address", PickupAddressFormatter.twoLine(pickup));
+        bindRow(R.id.rowWasteType, "Waste type", pickup.wasteType);
+        bindRow(R.id.rowDateTime, "Date / time", pickup.completedAt != null ? pickup.completedAt : pickup.createdAt);
+
+        double extraWeight = Math.max(0, pickup.measuredWeightKg - pickup.includedWeightKg);
+        bindRow(R.id.rowMeasuredWeight, "Measured weight", formatKg(pickup.measuredWeightKg));
+        bindRow(R.id.rowIncludedWeight, "Included weight", formatKg(pickup.includedWeightKg));
+        bindRow(R.id.rowExtraWeight, "Extra weight charged", formatKg(extraWeight));
+        bindRow(R.id.rowRatePerKg, "Rate per kg", formatTzs(pickup.ratePerKg));
+        bindRow(R.id.rowWasteMultiplier, "Waste multiplier", String.format(Locale.US, "%.2fx", pickup.wasteTypeMultiplier));
+        bindRow(R.id.rowWeightCharge, "Weight charge", formatTzs(extraWeight * pickup.ratePerKg * pickup.wasteTypeMultiplier));
+        bindRow(R.id.rowBookingFee, "Booking fee", formatTzs(pickup.bookingFee));
+        bindRow(R.id.rowDistanceFee, "Distance fee", formatTzs(pickup.distanceFee));
+        ((TextView) findViewById(R.id.tvFinalPrice)).setText(formatTzs(pickup.finalPrice));
+
+        View pay = findViewById(R.id.btnPayReceipt);
+        boolean paymentDue = pickup.finalPrice > 0 && !"Paid".equalsIgnoreCase(pickup.paymentStatus);
+        pay.setVisibility(paymentDue ? View.VISIBLE : View.GONE);
+        pay.setOnClickListener(v -> showPaymentMethods(pickup.id));
+        findViewById(R.id.btnSaveShareReceipt).setOnClickListener(v -> saveReceiptPdf(pickup));
+    }
+
+    private void bindRow(int rowId, String label, CharSequence value) {
+        View row = findViewById(rowId);
+        ((TextView) row.findViewById(R.id.tvLabel)).setText(label);
+        ((TextView) row.findViewById(R.id.tvValue)).setText(clean(value == null ? null : value.toString(), "—"));
     }
 
     private void saveReceiptPdf(PickupRow pickup) {
@@ -196,7 +233,7 @@ public class ReceiptActivity extends AppCompatActivity {
                                         .setNeutralButton(method.equals("cash") ? "I have paid the driver" : null,
                                                 method.equals("cash") ? (d,w) -> confirmCash(pickupId) : null).show();
                                 JSONObject payment = json.optJSONObject("data");
-                                ((TextView) findViewById(R.id.tvReceiptPaymentStatus)).setText(
+                                ((TextView) findViewById(R.id.chipPaymentStatus)).setText(
                                         payment != null ? payment.optString("status", "Pending") : "Pending");
                             });
                         }
@@ -231,7 +268,7 @@ public class ReceiptActivity extends AppCompatActivity {
         tvLabel.setLayoutParams(labelParams);
 
         TextView tvValue = new TextView(this);
-        tvValue.setText(value);
+        tvValue.setText(clean(value, "—"));
         tvValue.setTextColor(0xFF1A1A1A);
         tvValue.setTextSize(13);
         tvValue.setTypeface(null, android.graphics.Typeface.BOLD);
@@ -266,5 +303,10 @@ public class ReceiptActivity extends AppCompatActivity {
 
     private String formatKg(double kg) {
         return String.format(Locale.US, "%.1f kg", kg);
+    }
+
+    private static String clean(String value, String fallback) {
+        if (value == null || value.trim().isEmpty() || "null".equalsIgnoreCase(value.trim())) return fallback;
+        return value.trim();
     }
 }

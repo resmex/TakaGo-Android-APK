@@ -17,6 +17,8 @@ import com.takago.app.notifications.*;
 import com.takago.app.operator.*;
 import com.takago.app.resident.*;
 import android.content.Intent;
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -29,6 +31,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.core.content.ContextCompat;
 
 import com.takago.app.db.DatabaseHelper;
 import com.takago.app.db.SessionManager;
@@ -48,17 +53,26 @@ public class ResidentHomeActivity extends AppCompatActivity {
     private DatabaseHelper dbHelper;
     private SessionManager session;
 
-    private TextView tvUserName, tvUserWard, tvActiveStatus, tvActivePickupAddress, tvNoRecentRequests;
+    private TextView tvUserName, tvUserLocation, tvUserWard, tvActiveStatus, tvActivePickupAddress, tvNoRecentRequests;
     private View cardActivePickup, cardRequestPickup, residentContentContainer;
     private LinearLayout recentRequestsContainer;
     private ImageView ivUserAvatar;
     private PickupRow activePickup;
     private boolean routeInvitationShown;
+    private TextView tvNextSchedule;
+    private String lastHeaderLocation = "", lastHeaderWard = "";
+    private String lastAvatarPath = null;
+    private boolean locationPermissionRequested;
+    private final ActivityResultLauncher<String> locationPermissionLauncher = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(), granted -> {
+                if (granted) refreshHeaderLocation();
+                else if (lastHeaderLocation.isEmpty()) tvUserLocation.setText("Allow location access to detect your address");
+            });
     private final Handler liveHandler = new Handler(Looper.getMainLooper());
     private final Runnable liveRefresh = new Runnable() {
         @Override public void run() {
             com.takago.app.network.ServerSyncManager.syncAll(ResidentHomeActivity.this);
-            liveHandler.postDelayed(() -> { loadActivePickup(); loadRecentRequests(); loadNotificationBadge(); }, 700);
+            liveHandler.postDelayed(() -> { loadHeader(); loadActivePickup(); loadRecentRequests(); loadNotificationBadge(); loadNextSchedule(); }, 700);
             liveHandler.postDelayed(this, 2500);
         }
     };
@@ -72,6 +86,7 @@ public class ResidentHomeActivity extends AppCompatActivity {
         session = new SessionManager(this);
 
         tvUserName = findViewById(R.id.tvUserName);
+        tvUserLocation = findViewById(R.id.tvUserLocation);
         tvUserWard = findViewById(R.id.tvUserWard);
         tvActiveStatus = findViewById(R.id.tvActiveStatus);
         tvActivePickupAddress = findViewById(R.id.tvActivePickupAddress);
@@ -84,21 +99,23 @@ public class ResidentHomeActivity extends AppCompatActivity {
 
         setupClicks();
         setupBottomNav();
+        addNextScheduleCard();
+        com.takago.app.notifications.MyFirebaseMessagingService.registerAuthenticatedDevice(this);
+        com.takago.app.notifications.MyFirebaseMessagingService.requestNotificationPermission(this);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        tvUserName.setText(session.getName());
+        loadHeader();
         UserAccount resident = dbHelper.getUserById(session.getUserId());
-        ReadableLocationManager.refresh(this, dbHelper, session.getUserId(),
-                (primary, ward) -> tvUserWard.setText(LocationTextStyle.twoLine(primary, ward)));
+        ensureHeaderLocation();
         loadActivePickup();
         loadRecentRequests();
         loadNotificationBadge();
         loadRouteInvitation();
+        loadNextSchedule();
 
-        ImageUtils.loadAvatar(ivUserAvatar, resident != null ? resident.profileImagePath : null);
         liveHandler.removeCallbacks(liveRefresh);
         liveHandler.post(liveRefresh);
     }
@@ -130,7 +147,8 @@ public class ResidentHomeActivity extends AppCompatActivity {
         applyDashboardCardSpacing(true);
         tvActiveStatus.setText(residentStatus(activePickup.status));
         applyStatusStyle(tvActiveStatus, activePickup.status);
-        tvActivePickupAddress.setText(PickupAddressFormatter.styledTwoLine(activePickup));
+        tvActivePickupAddress.setText(joinMeta(PickupAddressFormatter.primary(activePickup), PickupAddressFormatter.wardLine(activePickup)));
+        updateResidentActionButton(activePickup.status);
 
         UserAccount driver = activePickup.driverId > 0
                 ? dbHelper.getUserById(activePickup.driverId) : null;
@@ -140,10 +158,6 @@ public class ResidentHomeActivity extends AppCompatActivity {
         ((TextView) findViewById(R.id.tvDriverName)).setText(driver != null ? safe(driver.name) : "Driver not assigned");
         ImageUtils.loadAvatar((ImageView) findViewById(R.id.ivDriverAvatar),
                 driver != null ? driver.profileImagePath : null);
-        String plate = vehicle != null ? safe(vehicle.plate) : (driver != null ? safe(driver.driverPlate) : "");
-        String type = vehicle != null ? safe(vehicle.model) : (driver != null ? safe(driver.vehicleInfo) : "");
-        ((TextView) findViewById(R.id.tvDriverDetails)).setText(joinMeta(plate, type));
-
         double distanceKm = activePickup.routeDistanceMeters > 0
                 ? activePickup.routeDistanceMeters / 1000d : activePickup.distanceKm;
         int eta = activePickup.routeDurationSeconds > 0
@@ -157,7 +171,7 @@ public class ResidentHomeActivity extends AppCompatActivity {
         String distance = driverArrived ? "At pickup location"
                 : distanceKm > 0 ? String.format(Locale.US, "%.1f km away", distanceKm) : "Distance pending";
         String etaText = driverArrived ? "Driver arrived" : eta > 0 ? "ETA " + eta + " min" : "ETA pending";
-        ((TextView) findViewById(R.id.tvEta)).setText(distance + "   " + etaText);
+        ((TextView) findViewById(R.id.tvDriverDetails)).setText(etaText + " · " + distance);
 
         TextView currentStop = findViewById(R.id.tvCurrentStop);
         int[] stops = dbHelper.getRouteStopSummary(activePickup.groupId, activePickup.id);
@@ -185,7 +199,7 @@ public class ResidentHomeActivity extends AppCompatActivity {
             TextView tvMeta = row.findViewById(R.id.tvRequestMeta);
             TextView tvStatus = row.findViewById(R.id.tvRequestStatus);
 
-            tvAddress.setText(PickupAddressFormatter.primary(pickup));
+            tvAddress.setText(nonEmpty(PickupAddressFormatter.primary(pickup), "Pickup " + nonEmpty(pickup.code, "request")));
             tvMeta.setText(buildRequestMeta(pickup));
             tvStatus.setText(residentStatus(pickup.status));
             applyStatusStyle(tvStatus, pickup.status);
@@ -195,23 +209,23 @@ public class ResidentHomeActivity extends AppCompatActivity {
                 intent.putExtra("pickupId", pickup.id);
                 startActivity(intent);
             });
+            TextView receipt = row.findViewById(R.id.tvViewReceipt);
+            boolean completed = "completed".equals(PickupStatusUi.normalize(pickup.status));
+            receipt.setVisibility(completed ? View.VISIBLE : View.GONE);
+            receipt.setOnClickListener(v -> startActivity(new Intent(this, ReceiptActivity.class).putExtra("pickupId", pickup.id)));
             recentRequestsContainer.addView(row);
         }
     }
 
     private String buildRequestMeta(PickupRow pickup) {
-        String wasteSize = pickup.category != null ? pickup.category : "Mixed";
-        String meta = formatDate(pickup.pickupDate) + " - " + wasteSize;
+        String location = clean(PickupAddressFormatter.wardLine(pickup));
+        String wasteSize = nonEmpty(clean(pickup.wasteType), nonEmpty(clean(pickup.category), "Mixed waste"));
+        StringBuilder meta = new StringBuilder();
+        if (!location.isEmpty()) meta.append(location).append(" · ");
+        meta.append(wasteSize);
         double kilograms = pickup.measuredWeightKg > 0 ? pickup.measuredWeightKg : pickup.weightKg;
-        if (kilograms > 0) {
-            meta += String.format(Locale.US, " - %.1f kg", kilograms);
-        }
-        if (pickup.distanceKm > 0) {
-            meta += pickup.distanceKm < 1
-                    ? String.format(Locale.US, " - %.0f m", pickup.distanceKm * 1000)
-                    : String.format(Locale.US, " - %.1f km", pickup.distanceKm);
-        }
-        return meta;
+        if (kilograms > 0) meta.append(String.format(Locale.US, " · %.1f kg", kilograms));
+        return meta.toString();
     }
 
     private void applyStatusStyle(TextView tvStatus, String status) {
@@ -238,6 +252,54 @@ public class ResidentHomeActivity extends AppCompatActivity {
                 tvStatus.setTextColor(0xFF2E7D32);
                 break;
         }
+    }
+
+    private void ensureHeaderLocation() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            refreshHeaderLocation();
+        } else if (!locationPermissionRequested) {
+            locationPermissionRequested = true;
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
+        }
+    }
+
+    private void refreshHeaderLocation() {
+        ReadableLocationManager.refresh(this, dbHelper, session.getUserId(), this::updateHeaderLocation);
+    }
+
+    private void loadHeader() {
+        tvUserName.setText(HeaderTextStyle.residentWelcome(session.getName()));
+        UserAccount resident = dbHelper.getUserById(session.getUserId());
+        if (resident == null) return;
+        updateHeaderLocation(ReadableLocationManager.primary(resident),
+                ReadableLocationManager.wardLine(resident));
+        String path = resident.profileImagePath == null ? "" : resident.profileImagePath.trim();
+        if (!path.equals(lastAvatarPath)) {
+            lastAvatarPath = path;
+            ImageUtils.loadAvatar(ivUserAvatar, path);
+        }
+    }
+
+    private void updateHeaderLocation(String location, String ward) {
+        String nextLocation = location == null ? "" : location.trim();
+        String nextWard = ward == null ? "" : ward.trim();
+        if (!nextLocation.isEmpty() && !nextLocation.equals(lastHeaderLocation)) {
+            lastHeaderLocation = nextLocation;
+            tvUserLocation.setText(nextLocation);
+        }
+        if (!nextWard.isEmpty() && !nextWard.equals(lastHeaderWard)) {
+            lastHeaderWard = nextWard;
+            tvUserWard.setText(nextWard);
+        }
+    }
+
+    private void updateResidentActionButton(String status) {
+        TextView button = findViewById(R.id.btnTrackDriver);
+        PickupStatusUi.ResidentAction action = PickupStatusUi.residentAction(status);
+        button.setText(PickupStatusUi.residentLabel(status));
+        button.setEnabled(action != PickupStatusUi.ResidentAction.NONE);
+        button.setAlpha(action == PickupStatusUi.ResidentAction.NONE ? 0.62f : 1f);
     }
 
     private void loadRouteInvitation() {
@@ -278,8 +340,28 @@ public class ResidentHomeActivity extends AppCompatActivity {
         cardRequestPickup.setOnClickListener(v ->
                 startActivity(new Intent(this, ResidentRequestPickupActivity.class)));
 
-        findViewById(R.id.btnTrackDriver).setOnClickListener(v ->
-                startActivity(new Intent(this, ResidentTrackActivity.class)));
+        findViewById(R.id.btnTrackDriver).setOnClickListener(v -> {
+            if (activePickup == null) return;
+            switch (PickupStatusUi.residentAction(activePickup.status)) {
+                case FIND_DRIVER:
+                    startActivity(new Intent(this, FindingDriverActivity.class)
+                            .putExtra("pickupId", activePickup.id));
+                    break;
+                case TRACK:
+                    startActivity(new Intent(this, ResidentTrackActivity.class));
+                    break;
+                case REVIEW_COLLECTION:
+                case PAY:
+                    startActivity(new Intent(this, ResidentPickupDetailsActivity.class)
+                            .putExtra("pickupId", activePickup.id));
+                    break;
+                case RECEIPT:
+                    startActivity(new Intent(this, ReceiptActivity.class).putExtra("pickupId", activePickup.id));
+                    break;
+                default:
+                    Toast.makeText(this, PickupStatusUi.residentLabel(activePickup.status), Toast.LENGTH_SHORT).show();
+            }
+        });
 
         findViewById(R.id.btnCall).setOnClickListener(v -> callAssignedDriver());
         findViewById(R.id.btnSms).setOnClickListener(v -> messageAssignedDriver());
@@ -293,6 +375,32 @@ public class ResidentHomeActivity extends AppCompatActivity {
 
         findViewById(R.id.btnNotification).setOnClickListener(v ->
                 startActivity(new Intent(this, NotificationActivity.class)));
+    }
+
+    private void addNextScheduleCard() {
+        LinearLayout card = new LinearLayout(this); card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(16), dp(14), dp(16), dp(14)); card.setBackgroundResource(R.drawable.bg_card);
+        TextView heading = new TextView(this); heading.setText("Next collection schedule"); heading.setTextSize(18); heading.setTextColor(0xFF123B32);
+        LinearLayout scheduleRow=new LinearLayout(this);scheduleRow.setOrientation(LinearLayout.HORIZONTAL);scheduleRow.setGravity(android.view.Gravity.CENTER_VERTICAL);scheduleRow.setPadding(0,dp(6),0,0);
+        tvNextSchedule = new TextView(this); tvNextSchedule.setText("Checking your ward schedule..."); tvNextSchedule.setTextSize(14);tvNextSchedule.setMaxLines(2);
+        TextView all = new TextView(this); all.setText("View all schedules  ›"); all.setTextColor(0xFF087F5B); all.setTextSize(15);
+        all.setText("View schedules >");all.setTextSize(14);
+        scheduleRow.addView(tvNextSchedule,new LinearLayout.LayoutParams(0,-2,1));scheduleRow.addView(all);
+        card.addView(heading); card.addView(scheduleRow);
+        card.setOnClickListener(v -> startActivity(new Intent(this, ResidentSchedulesActivity.class)));
+        LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1, -2); p.setMargins(0, dp(14), 0, dp(4));
+        ((LinearLayout) residentContentContainer).addView(card, 2, p);
+    }
+
+    private void loadNextSchedule() {
+        if (tvNextSchedule == null || session.getApiToken().isEmpty()) return;
+        ApiClient.get("/resident/schedules", session.getApiToken(), new ApiClient.JsonCallback() {
+            public void onSuccess(JSONObject json) { runOnUiThread(() -> { JSONArray rows=json.optJSONArray("data");
+                if(rows==null||rows.length()==0){tvNextSchedule.setText("No upcoming collection for your ward.");return;}
+                JSONObject row=rows.optJSONObject(0);String phone=row.optString("driver_phone");
+                tvNextSchedule.setText(row.optString("street")+"\n"+row.optString("scheduled_at").replace('T',' ')+"\nDriver: "+row.optString("driver_name","To be assigned")+(phone.isEmpty()?"":" — "+phone)); }); }
+            public void onError(String message) { runOnUiThread(() -> tvNextSchedule.setText("Connect to view the latest ward schedule.")); }
+        });
     }
 
     private void setupBottomNav() {
@@ -360,11 +468,21 @@ public class ResidentHomeActivity extends AppCompatActivity {
         return Math.round(value * getResources().getDisplayMetrics().density);
     }
 
-    private static String safe(String value) { return value == null ? "" : value.trim(); }
+    private static String safe(String value) { return clean(value); }
+    private static String clean(String value) {
+        if (value == null) return "";
+        String result = value.trim();
+        return "null".equalsIgnoreCase(result) ? "" : result;
+    }
+    private static String nonEmpty(String value, String fallback) {
+        String result = clean(value);
+        return result.isEmpty() ? fallback : result;
+    }
 
     private static String joinMeta(String first, String second) {
+        first = clean(first); second = clean(second);
         if (first.isEmpty()) return second;
         if (second.isEmpty()) return first;
-        return first + " - " + second;
+        return first + " · " + second;
     }
 }

@@ -19,6 +19,7 @@ import android.os.Looper;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.takago.app.db.DatabaseHelper;
+import com.takago.app.db.SessionManager;
 
 public class SplashActivity extends AppCompatActivity {
 
@@ -28,6 +29,7 @@ public class SplashActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
+        MyFirebaseMessagingService.requestNotificationPermission(this);
 
         // Safety net so the 5 demo accounts always exist, even on an older install.
         new DatabaseHelper(this).ensureDemoAccountsSeeded();
@@ -36,7 +38,22 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     private void goToLogin() {
-        startActivity(new Intent(this, LoginActivity.class));
+        SessionManager session = new SessionManager(this);
+        boolean remember = getSharedPreferences("login_preferences", MODE_PRIVATE).getBoolean("remember_me", false);
+        if (!remember || !session.isLoggedIn()) {
+            if (!remember) session.clearSession();
+            startActivity(new Intent(this, LoginActivity.class)); finish(); return;
+        }
+        MyFirebaseMessagingService.registerAuthenticatedDevice(this);
+        String role = session.getRole() == null ? "" : session.getRole().toLowerCase(java.util.Locale.US);
+        Class<?> target;
+        if ("resident".equals(role)) target=ResidentHomeActivity.class;
+        else if ("driver".equals(role)) target=DriverHomeActivity.class;
+        else if ("operator".equals(role)||"truck_owner".equals(role)) target=TruckOwnerHomeActivity.class;
+        else if ("ward_admin".equals(role)) target=WardAdminHomeActivity.class;
+        else if ("municipal_admin".equals(role)) target=MunicipalAdminHomeActivity.class;
+        else target=LoginActivity.class;
+        startActivity(new Intent(this, target));
         finish();
     }
 }

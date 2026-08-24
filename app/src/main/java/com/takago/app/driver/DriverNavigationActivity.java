@@ -54,6 +54,7 @@ import androidx.core.content.ContextCompat;
 
 import com.takago.app.db.DatabaseHelper;
 import com.takago.app.db.SessionManager;
+import com.takago.app.network.ApiClient;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -65,6 +66,8 @@ import com.google.android.gms.location.Priority;
 
 import java.util.List;
 import java.util.Locale;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 /**
  * Shown once a driver accepts a pickup request: a live Google map
@@ -75,8 +78,8 @@ import java.util.Locale;
 public class DriverNavigationActivity extends AppCompatActivity {
 
     private static final double MIN_REROUTE_DISTANCE_KM = 0.05;
-    private static final long PERIODIC_REROUTE_MS = 30000;
-    private static final long PERIODIC_CHECK_INTERVAL_MS = 5000;
+    private static final long PERIODIC_REROUTE_MS = 2500;
+    private static final long PERIODIC_CHECK_INTERVAL_MS = 2500;
 
     private DatabaseHelper dbHelper;
     private SessionManager session;
@@ -109,6 +112,7 @@ public class DriverNavigationActivity extends AppCompatActivity {
     private PickupRow activeTrip;
     private boolean arrivalConfirmedInUi;
     private int renderedStopCount;
+    private boolean routeJoinDialogShowing;
 
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -120,6 +124,7 @@ public class DriverNavigationActivity extends AppCompatActivity {
             if (!Double.isNaN(lastKnownLat)) {
                 handleDriverLocation(lastKnownLat, lastKnownLng);
             }
+            checkRouteJoinRequests();
             mainHandler.postDelayed(this, PERIODIC_CHECK_INTERVAL_MS);
         }
     };
@@ -242,7 +247,7 @@ public class DriverNavigationActivity extends AppCompatActivity {
             renderGroupedStopMarkers(trip);
         } else {
             clearGroupedStopMarkers();
-            mapEngine.addOrUpdateMarker("pickup", pickupPoint, MapMarkerFactory.pickupPin(this), 0.5f, 1.0f, false);
+            mapEngine.addOrUpdateMarker("pickup", pickupPoint, MapMarkerFactory.residentWaste(this), 0.5f, 0.5f, false);
         }
     }
 
@@ -292,7 +297,7 @@ public class DriverNavigationActivity extends AppCompatActivity {
     }
 
     private void startFusedLocationUpdates() {
-        LocationRequest request = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 4000)
+        LocationRequest request = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 2500)
                 .setMinUpdateDistanceMeters(10)
                 .build();
         fusedLocationClient.requestLocationUpdates(request, fusedLocationCallback, Looper.getMainLooper());
@@ -304,7 +309,7 @@ public class DriverNavigationActivity extends AppCompatActivity {
     }
 
     private void startManagerLocationUpdates() {
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 4000, 10, locationListener);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2500, 10, locationListener);
         Location last = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
         if (last != null) {
             handleDriverLocation(last);
@@ -351,7 +356,7 @@ public class DriverNavigationActivity extends AppCompatActivity {
         int driverId = session.getUserId();
         double movedSinceSave = Double.isNaN(lastSavedLat) ? Double.MAX_VALUE
                 : RoutingService.haversineKm(lastSavedLat, lastSavedLng, lat, lng);
-        if (movedSinceSave >= 0.01 || System.currentTimeMillis() - lastLocationSavedAtMs >= 3_000L) {
+        if (movedSinceSave >= 0.01 || System.currentTimeMillis() - lastLocationSavedAtMs >= 2_500L) {
             dbHelper.updateDriverLocation(driverId, lat, lng, bearing, speed, accuracy);
             com.takago.app.network.ServerSyncManager.pushDriverLocation(this, driverId, lat, lng);
             lastSavedLat = lat;
@@ -361,7 +366,7 @@ public class DriverNavigationActivity extends AppCompatActivity {
 
         if (mapEngine != null) {
             mapEngine.updateMovingMarker("driver", new LatLngPoint(lat, lng),
-                    ContextCompat.getDrawable(this, R.drawable.ic_truck_outline), true);
+                    MapMarkerFactory.driverTruck(this), true);
         }
 
         boolean pickupAvailable = RoutingService.isValidCoordinate(pickupLat, pickupLng)
@@ -490,6 +495,7 @@ public class DriverNavigationActivity extends AppCompatActivity {
             com.takago.app.network.ServerSyncManager.transition(this, tripId, "arrived", lastKnownLat, lastKnownLng, null, error -> runOnUiThread(() -> {
                 if (error != null) { Toast.makeText(this, error, Toast.LENGTH_LONG).show(); return; }
                 arrivalConfirmedInUi = true; label.setText("Start collection"); Toast.makeText(this, "Arrival confirmed", Toast.LENGTH_SHORT).show();
+                com.takago.app.network.ServerSyncManager.syncTracking(this, this::loadTrip);
             }));
             return;
         }
@@ -658,8 +664,61 @@ public class DriverNavigationActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         mapController.onResume();
+        com.takago.app.network.ServerSyncManager.syncTracking(this, this::loadTrip);
+        checkRouteJoinRequests();
         if (isTravelActive(tripStatus)) {
             ensureLocationTracking();
+        }
+    }
+
+    private void checkRouteJoinRequests() {
+        if (routeJoinDialogShowing || session.getApiToken().isEmpty()) return;
+        ApiClient.get("/driver/route-requests", session.getApiToken(), new ApiClient.JsonCallback() {
+            public void onSuccess(JSONObject json) {
+                JSONArray rows = json.optJSONArray("data");
+                if (rows == null || rows.length() == 0) return;
+                JSONObject request = rows.optJSONObject(0);
+                if (request == null) return;
+                runOnUiThread(() -> showRouteJoinRequest(request));
+            }
+            public void onError(String message) { }
+        });
+    }
+
+    private void showRouteJoinRequest(JSONObject request) {
+        if (routeJoinDialogShowing || isFinishing()) return;
+        routeJoinDialogShowing = true;
+        String resident = request.optString("resident_name", "A nearby resident");
+        String location = request.optString("address", request.optString("ward_name", "Nearby"));
+        String waste = request.optString("waste_type", "Waste") + " · " + request.optString("size", "");
+        new AlertDialog.Builder(this)
+                .setTitle("Resident wants to join your route")
+                .setMessage(resident + "\n" + location + "\n" + waste)
+                .setPositiveButton("Accept", (dialog, which) -> respondRouteJoin(request.optInt("id"), "accept"))
+                .setNegativeButton("Ignore", (dialog, which) -> respondRouteJoin(request.optInt("id"), "ignore"))
+                .setOnCancelListener(dialog -> routeJoinDialogShowing = false)
+                .show();
+    }
+
+    private void respondRouteJoin(int invitationId, String decision) {
+        try {
+            ApiClient.post("/driver/route-requests/" + invitationId + "/respond", session.getApiToken(),
+                    new JSONObject().put("decision", decision), new ApiClient.JsonCallback() {
+                        public void onSuccess(JSONObject json) { runOnUiThread(() -> {
+                            routeJoinDialogShowing = false;
+                            Toast.makeText(DriverNavigationActivity.this,
+                                    json.optString("message", "Route request updated"), Toast.LENGTH_LONG).show();
+                            com.takago.app.network.ServerSyncManager.syncTracking(
+                                    DriverNavigationActivity.this, DriverNavigationActivity.this::loadTrip);
+                        }); }
+                        public void onError(String message) { runOnUiThread(() -> {
+                            routeJoinDialogShowing = false;
+                            Toast.makeText(DriverNavigationActivity.this, message, Toast.LENGTH_LONG).show();
+                        }); }
+                    });
+        } catch (Exception error) {
+            routeJoinDialogShowing = false;
+            Toast.makeText(this, error.getMessage(), Toast.LENGTH_LONG).show();
         }
     }
 
